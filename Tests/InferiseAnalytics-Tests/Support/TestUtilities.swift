@@ -66,15 +66,6 @@ class ZiggyPlugin: EventPlugin {
     }
 }
 
-#if !os(Linux) && !os(Windows)
-
-@objc(INFMyDestination)
-public class ObjCMyDestination: NSObject, ObjCPlugin, ObjCPluginShim {
-    public func instance() -> EventPlugin { return MyDestination() }
-}
-
-#endif
-
 class MyDestination: DestinationPlugin {
     var timeline: Timeline
     let type: PluginType

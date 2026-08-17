@@ -49,10 +49,6 @@ jobs:
         run: |
           cd Examples/apps/BasicExample
           xcodebuild -workspace "BasicExample.xcworkspace" -scheme "BasicExample" -sdk iphonesimulator
-      - name: ObjCExample
-        run: |
-          cd Examples/apps/ObjCExample
-          xcodebuild -workspace "ObjCExample.xcworkspace" -scheme "ObjCExample" -sdk iphonesimulator
       - name: InferiseUIKitExample
         run: |
           cd Examples/apps/InferiseUIKitExample
