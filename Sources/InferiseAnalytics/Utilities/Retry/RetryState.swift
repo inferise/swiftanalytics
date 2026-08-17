@@ -19,7 +19,7 @@ public struct RetryState: Codable {
     }
 
     public func isRateLimited(currentTime: TimeInterval) -> Bool {
-        guard pipelineState == .rateLimited else { return false }
+        guard self.pipelineState == .rateLimited else { return false }
         guard let waitTime = waitUntilTime else { return false }
         return currentTime < waitTime
     }

@@ -8,32 +8,32 @@
 import Foundation
 
 public struct Settings: Codable {
-    public var integrations: JSON? = nil
-    public var plan: JSON? = nil
-    public var edgeFunction: JSON? = nil
-    public var middlewareSettings: JSON? = nil
-    public var autoInstrumentation: JSON? = nil
-    public var metrics: JSON? = nil
-    public var consentSettings: JSON? = nil
+    public var integrations: JSON?
+    public var plan: JSON?
+    public var edgeFunction: JSON?
+    public var middlewareSettings: JSON?
+    public var autoInstrumentation: JSON?
+    public var metrics: JSON?
+    public var consentSettings: JSON?
 
     public init(writeKey: String, apiHost: String) {
-        integrations = try! JSON([
+        self.integrations = try! JSON([
             InferiseDestination.Constants.integrationName.rawValue: [
                 InferiseDestination.Constants.apiKey.rawValue: writeKey,
-                InferiseDestination.Constants.apiHost.rawValue: apiHost
-            ]
+                InferiseDestination.Constants.apiHost.rawValue: apiHost,
+            ],
         ])
     }
-    
+
     public init(writeKey: String) {
-        integrations = try! JSON([
+        self.integrations = try! JSON([
             InferiseDestination.Constants.integrationName.rawValue: [
                 InferiseDestination.Constants.apiKey.rawValue: writeKey,
-                InferiseDestination.Constants.apiHost.rawValue: HTTPClient.getDefaultAPIHost()
-            ]
+                InferiseDestination.Constants.apiHost.rawValue: HTTPClient.getDefaultAPIHost(),
+            ],
         ])
     }
-    
+
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         self.integrations = try? values.decode(JSON.self, forKey: CodingKeys.integrations)
@@ -44,19 +44,19 @@ public struct Settings: Codable {
         self.metrics = try? values.decode(JSON.self, forKey: CodingKeys.metrics)
         self.consentSettings = try? values.decode(JSON.self, forKey: CodingKeys.consentSettings)
     }
-    
-    static public func load(from url: URL?) -> Settings? {
-        guard let url = url else { return nil }
+
+    static public func load(from url: URL?) -> Self? {
+        guard let url else { return nil }
         guard let data = try? Data(contentsOf: url) else { return nil }
-        let settings = try? JSONDecoder.default.decode(Settings.self, from: data)
+        let settings = try? JSONDecoder.default.decode(Self.self, from: data)
         return settings
     }
-    
-    static public func load(resource: String, bundle: Bundle = Bundle.main) -> Settings? {
+
+    static public func load(resource: String, bundle: Bundle = Bundle.main) -> Self? {
         let url = bundle.url(forResource: resource, withExtension: nil)
-        return load(from: url)
+        return self.load(from: url)
     }
-    
+
     enum CodingKeys: String, CodingKey {
         case integrations
         case plan
@@ -66,7 +66,7 @@ public struct Settings: Codable {
         case metrics
         case consentSettings
     }
-    
+
     /**
      * Easily retrieve settings for a specific integration name.
      *
@@ -78,27 +78,27 @@ public struct Settings: Codable {
         let result = settings[key] as? [String: Any]
         return result
     }
-    
+
     public func integrationSettings<T: Decodable>(forKey key: String) -> T? {
-        var result: T? = nil
+        var result: T?
         guard let settings = integrations?.dictionaryValue else { return nil }
         if let dict = settings[key], let jsonData = try? JSONSerialization.data(withJSONObject: dict) {
             result = try? JSONDecoder.default.decode(T.self, from: jsonData)
         }
         return result
     }
-    
+
     public func integrationSettings<T: Decodable>(forPlugin plugin: DestinationPlugin) -> T? {
-        return integrationSettings(forKey: plugin.key)
+        self.integrationSettings(forKey: plugin.key)
     }
-    
+
     public func hasIntegrationSettings(forPlugin plugin: DestinationPlugin) -> Bool {
-        return hasIntegrationSettings(key: plugin.key)
+        self.hasIntegrationSettings(key: plugin.key)
     }
 
     public func hasIntegrationSettings(key: String) -> Bool {
         guard let settings = integrations?.dictionaryValue else { return false }
-        return (settings[key] != nil)
+        return settings[key] != nil
     }
 }
 
@@ -110,31 +110,31 @@ extension Settings: Equatable {
     }
 }
 
-extension Analytics {     
-    internal func update(settings: Settings) {
+extension Analytics {
+    func update(settings: Settings) {
         apply { plugin in
-            plugin.update(settings: settings, type: updateType(for: plugin))
+            plugin.update(settings: settings, type: self.updateType(for: plugin))
             if let destPlugin = plugin as? DestinationPlugin {
                 destPlugin.apply { subPlugin in
-                    subPlugin.update(settings: settings, type: updateType(for: subPlugin))
+                    subPlugin.update(settings: settings, type: self.updateType(for: subPlugin))
                 }
             }
         }
     }
-    
-    internal func updateIfNecessary(plugin: Plugin) {
+
+    func updateIfNecessary(plugin: Plugin) {
         guard let system: System = store.currentState() else { return }
         // if we're already running, update has already been called for existing plugins,
         // so we just wanna call it on this one if it hasn't been done already.
         if system.running, let settings = system.settings {
-            plugin.update(settings: settings, type: updateType(for: plugin))
+            plugin.update(settings: settings, type: self.updateType(for: plugin))
         }
     }
-    
-    internal func updateType(for plugin: Plugin) -> UpdateType {
+
+    func updateType(for plugin: Plugin) -> UpdateType {
         guard let system: System = store.currentState() else { return .initial }
         let alreadyInitialized = system.initializedPlugins.contains { p in
-            return plugin === p
+            plugin === p
         }
         if alreadyInitialized {
             return .refresh
@@ -143,37 +143,37 @@ extension Analytics {
             return .initial
         }
     }
-    
-    internal static let checkSettingsInterval: TimeInterval = 10
 
-    internal func checkSettingsIfNeeded() {
+    static let checkSettingsInterval: TimeInterval = 10
+
+    func checkSettingsIfNeeded() {
         if Date().timeIntervalSince(lastSettingsCheck) < Self.checkSettingsInterval {
             return
         }
-        checkSettings()
+        self.checkSettings()
     }
 
-    internal func checkSettings() {
+    func checkSettings() {
         guard tryBeginCheckingSettings() else { return }
         recordSettingsCheckTimestamp()
 
         #if DEBUG
-        if isUnitTesting {
-            // we don't really wanna wait for this network call during tests...
-            // but we should make it work similarly.
-            pauseEventProcessing()
+            if isUnitTesting {
+                // we don't really wanna wait for this network call during tests...
+                // but we should make it work similarly.
+                pauseEventProcessing()
 
-            operatingMode.run(queue: DispatchQueue.main) {
-                if let state: System = self.store.currentState(), let settings = state.settings {
-                    self.store.dispatch(action: System.UpdateSettingsAction(settings: settings))
-                    self.update(settings: settings)
+                operatingMode.run(queue: DispatchQueue.main) {
+                    if let state: System = self.store.currentState(), let settings = state.settings {
+                        self.store.dispatch(action: System.UpdateSettingsAction(settings: settings))
+                        self.update(settings: settings)
+                    }
+                    self.resumeEventProcessing()
+                    self.endCheckingSettings()
                 }
-                self.resumeEventProcessing()
-                self.endCheckingSettings()
-            }
 
-            return
-        }
+                return
+            }
         #endif
 
         let writeKey = self.configuration.values.writeKey
@@ -181,7 +181,7 @@ extension Analytics {
 
         // stop things; queue in case our settings have changed.
         pauseEventProcessing()
-        httpClient.settingsFor(writeKey: writeKey) { (success, settings) in
+        httpClient.settingsFor(writeKey: writeKey) { success, settings in
             defer { self.endCheckingSettings() }
 
             if success, let s = settings {

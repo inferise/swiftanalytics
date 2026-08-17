@@ -1,6 +1,6 @@
 //
 //  Errors.swift
-//  
+//
 //
 //  Created by Brandon Sneed on 10/20/22.
 //
@@ -30,13 +30,13 @@ public indirect enum AnalyticsError: Error {
 
     case enrichmentError(String)
 
-    case settingsFail(AnalyticsError)
-    case batchUploadFail(AnalyticsError)
+    case settingsFail(Self)
+    case batchUploadFail(Self)
 }
 
 extension Analytics {
     /// Tries to convert known error types to AnalyticsError.
-    static internal func translate(error: Error) -> Error {
+    static func translate(error: Error) -> Error {
         if let e = error as? OutputFileStream.OutputStreamError {
             switch e {
             case .invalidPath(let path):
@@ -51,7 +51,7 @@ extension Analytics {
                 return AnalyticsError.storageUnableToClose(path)
             }
         }
-        
+
         if let e = error as? JSON.JSONError {
             switch e {
             case .incorrectType:
@@ -64,7 +64,7 @@ extension Analytics {
         }
         return error
     }
-    
+
     /// Reports an internal error to the user-defined error handler.
     public func reportInternalError(_ error: Error, fatal: Bool = false) {
         let translatedError = Self.translate(error: error)
@@ -74,7 +74,7 @@ extension Analytics {
             exceptionFailure("A critical error occurred: \(translatedError)")
         }
     }
-    
+
     static public func reportInternalError(_ error: Error, fatal: Bool = false) {
         // we don't have an instance of analytics to call to get our error handler,
         // but we can at least report the message to the console.

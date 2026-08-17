@@ -9,7 +9,6 @@ import XCTest
 @testable import InferiseAnalytics
 
 final class MemoryLeak_Tests: XCTestCase {
-
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
     }
@@ -26,29 +25,29 @@ final class MemoryLeak_Tests: XCTestCase {
 
         RunLoop.main.run(until: Date(timeIntervalSinceNow: 1))
 
-        let inferiseDest = analytics.find(pluginType: InferiseDestination.self)!
-        let destMetadata = inferiseDest.timeline.find(pluginType: DestinationMetadataPlugin.self)!
-        let startupQueue = analytics.find(pluginType: StartupQueue.self)!
+        let inferiseDest = try XCTUnwrap(analytics.find(pluginType: InferiseDestination.self))
+        let destMetadata = try XCTUnwrap(inferiseDest.timeline.find(pluginType: DestinationMetadataPlugin.self))
+        let startupQueue = try XCTUnwrap(analytics.find(pluginType: StartupQueue.self))
 
-        let context = analytics.find(pluginType: Context.self)!
+        let context = try XCTUnwrap(analytics.find(pluginType: Context.self))
 
         #if !os(Linux) && !os(Windows)
-        let deviceToken = analytics.find(pluginType: DeviceToken.self)!
+            let deviceToken = try XCTUnwrap(analytics.find(pluginType: DeviceToken.self))
         #endif
         #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
-        let iosLifecycle = analytics.find(pluginType: iOSLifecycleEvents.self)!
-        let iosMonitor = analytics.find(pluginType: iOSLifecycleMonitor.self)!
+            let iosLifecycle = try XCTUnwrap(analytics.find(pluginType: iOSLifecycleEvents.self))
+            let iosMonitor = try XCTUnwrap(analytics.find(pluginType: iOSLifecycleMonitor.self))
         #elseif os(watchOS)
-        let watchLifecycle = analytics.find(pluginType: watchOSLifecycleEvents.self)!
-        let watchMonitor = analytics.find(pluginType: watchOSLifecycleMonitor.self)!
+            let watchLifecycle = try XCTUnwrap(analytics.find(pluginType: watchOSLifecycleEvents.self))
+            let watchMonitor = try XCTUnwrap(analytics.find(pluginType: watchOSLifecycleMonitor.self))
         #elseif os(macOS)
-        let macLifecycle = analytics.find(pluginType: macOSLifecycleEvents.self)!
-        let macMonitor = analytics.find(pluginType: macOSLifecycleMonitor.self)!
+            let macLifecycle = try XCTUnwrap(analytics.find(pluginType: macOSLifecycleEvents.self))
+            let macMonitor = try XCTUnwrap(analytics.find(pluginType: macOSLifecycleMonitor.self))
         #endif
 
         // test that enrichment closure isn't leaked.  was previously a retain loop.
         analytics.add { event in
-            return event
+            event
         }
 
         analytics.remove(plugin: startupQueue)
@@ -57,17 +56,17 @@ final class MemoryLeak_Tests: XCTestCase {
 
         analytics.remove(plugin: context)
         #if !os(Linux) && !os(Windows)
-        analytics.remove(plugin: deviceToken)
+            analytics.remove(plugin: deviceToken)
         #endif
         #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
-        analytics.remove(plugin: iosLifecycle)
-        analytics.remove(plugin: iosMonitor)
+            analytics.remove(plugin: iosLifecycle)
+            analytics.remove(plugin: iosMonitor)
         #elseif os(watchOS)
-        analytics.remove(plugin: watchLifecycle)
-        analytics.remove(plugin: watchMonitor)
+            analytics.remove(plugin: watchLifecycle)
+            analytics.remove(plugin: watchMonitor)
         #elseif os(macOS)
-        analytics.remove(plugin: macLifecycle)
-        analytics.remove(plugin: macMonitor)
+            analytics.remove(plugin: macLifecycle)
+            analytics.remove(plugin: macMonitor)
         #endif
 
         RunLoop.main.run(until: Date(timeIntervalSinceNow: 1))
@@ -78,23 +77,23 @@ final class MemoryLeak_Tests: XCTestCase {
 
         checkIfLeaked(context)
         #if !os(Linux) && !os(Windows)
-        checkIfLeaked(deviceToken)
+            checkIfLeaked(deviceToken)
         #endif
         #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
-        checkIfLeaked(iosLifecycle)
-        checkIfLeaked(iosMonitor)
+            checkIfLeaked(iosLifecycle)
+            checkIfLeaked(iosMonitor)
         #elseif os(watchOS)
-        checkIfLeaked(watchLifecycle)
-        checkIfLeaked(watchMonitor)
+            checkIfLeaked(watchLifecycle)
+            checkIfLeaked(watchMonitor)
         #elseif os(macOS)
-        checkIfLeaked(macLifecycle)
-        checkIfLeaked(macMonitor)
+            checkIfLeaked(macLifecycle)
+            checkIfLeaked(macMonitor)
         #endif
 
         checkIfLeaked(analytics)
     }
 
-    func testLeaksSimple() throws {
+    func testLeaksSimple() {
         let analytics = Analytics(configuration: Configuration(writeKey: uniqueWriteKey()))
 
         waitUntilStarted(analytics: analytics)
@@ -104,5 +103,4 @@ final class MemoryLeak_Tests: XCTestCase {
 
         checkIfLeaked(analytics)
     }
-
 }

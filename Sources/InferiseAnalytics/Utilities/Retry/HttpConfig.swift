@@ -22,11 +22,11 @@ public struct RateLimitConfig: Codable {
         self.maxRetryInterval = try container.decodeIfPresent(Int.self, forKey: .maxRetryInterval) ?? 300
     }
 
-    public func validated() -> RateLimitConfig {
-        return RateLimitConfig(
-            enabled: enabled,
-            maxRetryCount: max(0, min(maxRetryCount, 1000)),
-            maxRetryInterval: max(1, min(maxRetryInterval, 3600))
+    public func validated() -> Self {
+        Self(
+            enabled: self.enabled,
+            maxRetryCount: max(0, min(self.maxRetryCount, 1000)),
+            maxRetryInterval: max(1, min(self.maxRetryInterval, 3600))
         )
     }
 }
@@ -66,7 +66,7 @@ public struct BackoffConfig: Codable {
             429: .retry,
             460: .retry,
             501: .drop,
-            505: .drop
+            505: .drop,
         ]
     ) {
         self.enabled = enabled
@@ -96,7 +96,7 @@ public struct BackoffConfig: Codable {
         // statusCodeOverrides comes from JSON with string keys like "400": "retry"
         let defaultOverrides: [Int: RetryBehavior] = [
             408: .retry, 410: .retry, 429: .retry, 460: .retry,
-            501: .drop, 505: .drop
+            501: .drop, 505: .drop,
         ]
         if let stringKeyed = try container.decodeIfPresent([String: RetryBehavior].self, forKey: .statusCodeOverrides) {
             var result = [Int: RetryBehavior]()
@@ -113,34 +113,34 @@ public struct BackoffConfig: Codable {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(enabled, forKey: .enabled)
-        try container.encode(maxRetryCount, forKey: .maxRetryCount)
-        try container.encode(baseBackoffInterval, forKey: .baseBackoffInterval)
-        try container.encode(maxBackoffInterval, forKey: .maxBackoffInterval)
-        try container.encode(maxTotalBackoffDuration, forKey: .maxTotalBackoffDuration)
-        try container.encode(jitterPercent, forKey: .jitterPercent)
-        try container.encode(default4xxBehavior, forKey: .default4xxBehavior)
-        try container.encode(default5xxBehavior, forKey: .default5xxBehavior)
-        try container.encode(unknownCodeBehavior, forKey: .unknownCodeBehavior)
+        try container.encode(self.enabled, forKey: .enabled)
+        try container.encode(self.maxRetryCount, forKey: .maxRetryCount)
+        try container.encode(self.baseBackoffInterval, forKey: .baseBackoffInterval)
+        try container.encode(self.maxBackoffInterval, forKey: .maxBackoffInterval)
+        try container.encode(self.maxTotalBackoffDuration, forKey: .maxTotalBackoffDuration)
+        try container.encode(self.jitterPercent, forKey: .jitterPercent)
+        try container.encode(self.default4xxBehavior, forKey: .default4xxBehavior)
+        try container.encode(self.default5xxBehavior, forKey: .default5xxBehavior)
+        try container.encode(self.unknownCodeBehavior, forKey: .unknownCodeBehavior)
         let stringKeyed = Dictionary(uniqueKeysWithValues: statusCodeOverrides.map { (String($0.key), $0.value) })
         try container.encode(stringKeyed, forKey: .statusCodeOverrides)
     }
 
-    public func validated() -> BackoffConfig {
-        let validOverrides = statusCodeOverrides.filter { (code, _) in
+    public func validated() -> Self {
+        let validOverrides = self.statusCodeOverrides.filter { code, _ in
             code >= 100 && code <= 599
         }
 
-        return BackoffConfig(
-            enabled: enabled,
-            maxRetryCount: max(0, min(maxRetryCount, 1000)),
-            baseBackoffInterval: max(0.1, min(baseBackoffInterval, 60.0)),
-            maxBackoffInterval: max(1, min(maxBackoffInterval, 3600)),
-            maxTotalBackoffDuration: max(0, min(maxTotalBackoffDuration, 604800)),
-            jitterPercent: max(0, min(jitterPercent, 50)),
-            default4xxBehavior: default4xxBehavior,
-            default5xxBehavior: default5xxBehavior,
-            unknownCodeBehavior: unknownCodeBehavior,
+        return Self(
+            enabled: self.enabled,
+            maxRetryCount: max(0, min(self.maxRetryCount, 1000)),
+            baseBackoffInterval: max(0.1, min(self.baseBackoffInterval, 60.0)),
+            maxBackoffInterval: max(1, min(self.maxBackoffInterval, 3600)),
+            maxTotalBackoffDuration: max(0, min(self.maxTotalBackoffDuration, 604_800)),
+            jitterPercent: max(0, min(self.jitterPercent, 50)),
+            default4xxBehavior: self.default4xxBehavior,
+            default5xxBehavior: self.default5xxBehavior,
+            unknownCodeBehavior: self.unknownCodeBehavior,
             statusCodeOverrides: validOverrides
         )
     }

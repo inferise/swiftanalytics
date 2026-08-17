@@ -7,68 +7,68 @@
 import Foundation
 
 public class TransientDB {
-    // our data store
-    internal let store: any DataStore
+    /// our data store
+    let store: any DataStore
     // keeps items added in the order given.
-    internal let syncQueue = DispatchQueue(label: "transientDB.sync")
+    let syncQueue = DispatchQueue(label: "transientDB.sync")
     private let asyncAppend: Bool
-    
+
     public var hasData: Bool {
         var result: Bool = false
-        syncQueue.sync {
-            result = store.hasData
+        self.syncQueue.sync {
+            result = self.store.hasData
         }
         return result
     }
-    
+
     public var count: Int {
         var result: Int = 0
-        syncQueue.sync {
-            result = store.count
+        self.syncQueue.sync {
+            result = self.store.count
         }
         return result
     }
-    
+
     public var transactionType: DataTransactionType {
-        return store.transactionType
+        self.store.transactionType
     }
-    
+
     public init(store: any DataStore, asyncAppend: Bool = true) {
         self.store = store
         self.asyncAppend = asyncAppend
     }
-    
+
     public func reset() {
-        syncQueue.sync {
-            store.reset()
+        self.syncQueue.sync {
+            self.store.reset()
         }
     }
-    
+
     public func append(data: RawEvent) {
-        if asyncAppend {
-            syncQueue.async { [weak self] in
+        if self.asyncAppend {
+            self.syncQueue.async { [weak self] in
                 guard let self else { return }
-                store.append(data: data)
+                self.store.append(data: data)
             }
         } else {
-            syncQueue.sync { [weak self] in
+            self.syncQueue.sync { [weak self] in
                 guard let self else { return }
-                store.append(data: data)
+                self.store.append(data: data)
             }
         }
     }
-    
+
     public func fetch(count: Int? = nil, maxBytes: Int? = nil, offset: Int = 0) -> DataResult? {
-        var result: DataResult? = nil
-        syncQueue.sync {
-            result = store.fetch(count: count, maxBytes: maxBytes, offset: offset)
+        var result: DataResult?
+        self.syncQueue.sync {
+            result = self.store.fetch(count: count, maxBytes: maxBytes, offset: offset)
         }
         return result
     }
-    
+
     public func remove(data: [DataStore.ItemID]) {
-        syncQueue.sync {
-            store.remove(data: data)
+        self.syncQueue.sync {
+            self.store.remove(data: data)
         }
     }
 }

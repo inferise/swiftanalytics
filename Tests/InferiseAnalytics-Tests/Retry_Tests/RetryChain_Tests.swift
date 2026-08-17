@@ -8,12 +8,12 @@ class RetryChain_Tests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        config = HttpConfig(
+        self.config = HttpConfig(
             rateLimitConfig: RateLimitConfig(enabled: true),
             backoffConfig: BackoffConfig(enabled: true)
         )
-        timeProvider = FakeTimeProvider(currentTime: 1000)
-        stateMachine = RetryStateMachine(config: config, timeProvider: timeProvider)
+        self.timeProvider = FakeTimeProvider(currentTime: 1000)
+        self.stateMachine = RetryStateMachine(config: self.config, timeProvider: self.timeProvider)
     }
 
     func testChain_429_429_200() {
@@ -26,14 +26,14 @@ class RetryChain_Tests: XCTestCase {
             batchFile: "batch1",
             currentTime: timeProvider.now()
         )
-        state = stateMachine.handleResponse(state: state, response: response1)
+        state = self.stateMachine.handleResponse(state: state, response: response1)
 
         // Verify: Rate limited
         XCTAssertEqual(state.pipelineState, .rateLimited)
         XCTAssertEqual(state.waitUntilTime, 1030) // 1000 + 30
 
         // Try to upload while rate limited - should skip
-        let (decision1, _) = stateMachine.shouldUploadBatch(state: state, batchFile: "batch2")
+        let (decision1, _) = self.stateMachine.shouldUploadBatch(state: state, batchFile: "batch2")
         if case .skipAllBatches = decision1 {
             XCTAssert(true)
         } else {
@@ -41,7 +41,7 @@ class RetryChain_Tests: XCTestCase {
         }
 
         // Advance time past first rate limit (31s)
-        timeProvider.advance(by: 31)
+        self.timeProvider.advance(by: 31)
 
         // Attempt 2: 429 again with another 30s retry-after
         let response2 = ResponseInfo(
@@ -50,7 +50,7 @@ class RetryChain_Tests: XCTestCase {
             batchFile: "batch1",
             currentTime: timeProvider.now()
         )
-        state = stateMachine.handleResponse(state: state, response: response2)
+        state = self.stateMachine.handleResponse(state: state, response: response2)
 
         // Verify: Still rate limited with new wait time
         XCTAssertEqual(state.pipelineState, .rateLimited)
@@ -58,7 +58,7 @@ class RetryChain_Tests: XCTestCase {
         XCTAssertEqual(state.globalRetryCount, 2)
 
         // Advance time past second rate limit (31s more)
-        timeProvider.advance(by: 31)
+        self.timeProvider.advance(by: 31)
 
         // Attempt 3: 200 success
         let response3 = ResponseInfo(
@@ -67,7 +67,7 @@ class RetryChain_Tests: XCTestCase {
             batchFile: "batch1",
             currentTime: timeProvider.now()
         )
-        state = stateMachine.handleResponse(state: state, response: response3)
+        state = self.stateMachine.handleResponse(state: state, response: response3)
 
         // Verify: Back to ready state
         XCTAssertEqual(state.pipelineState, .ready)
@@ -75,7 +75,7 @@ class RetryChain_Tests: XCTestCase {
         XCTAssertEqual(state.globalRetryCount, 0)
 
         // Should now allow uploads
-        let (decision2, _) = stateMachine.shouldUploadBatch(state: state, batchFile: "batch2")
+        let (decision2, _) = self.stateMachine.shouldUploadBatch(state: state, batchFile: "batch2")
         if case .proceed = decision2 {
             XCTAssert(true)
         } else {
@@ -83,7 +83,7 @@ class RetryChain_Tests: XCTestCase {
         }
     }
 
-    func testChain_500_500_200() {
+    func testChain_500_500_200() throws {
         var state = RetryState()
 
         // Attempt 1: 500 error
@@ -93,16 +93,16 @@ class RetryChain_Tests: XCTestCase {
             batchFile: "batch1",
             currentTime: timeProvider.now()
         )
-        state = stateMachine.handleResponse(state: state, response: response1)
+        state = self.stateMachine.handleResponse(state: state, response: response1)
 
         // Verify: Batch metadata created
         XCTAssertEqual(state.batchMetadata.count, 1)
-        let metadata1 = state.batchMetadata["batch1"]!
+        let metadata1 = try XCTUnwrap(state.batchMetadata["batch1"])
         XCTAssertEqual(metadata1.failureCount, 1)
         XCTAssertNotNil(metadata1.nextRetryTime)
 
         // Try to upload before backoff expires - should skip this batch
-        let (decision1, _) = stateMachine.shouldUploadBatch(state: state, batchFile: "batch1")
+        let (decision1, _) = self.stateMachine.shouldUploadBatch(state: state, batchFile: "batch1")
         if case .skipThisBatch = decision1 {
             XCTAssert(true)
         } else {
@@ -110,8 +110,8 @@ class RetryChain_Tests: XCTestCase {
         }
 
         // Advance past backoff time
-        let backoffTime = metadata1.nextRetryTime!
-        timeProvider.setTime(backoffTime + 1)
+        let backoffTime = try XCTUnwrap(metadata1.nextRetryTime)
+        self.timeProvider.setTime(backoffTime + 1)
 
         // Attempt 2: 500 again
         let response2 = ResponseInfo(
@@ -120,15 +120,15 @@ class RetryChain_Tests: XCTestCase {
             batchFile: "batch1",
             currentTime: timeProvider.now()
         )
-        state = stateMachine.handleResponse(state: state, response: response2)
+        state = self.stateMachine.handleResponse(state: state, response: response2)
 
         // Verify: Failure count incremented
-        let metadata2 = state.batchMetadata["batch1"]!
+        let metadata2 = try XCTUnwrap(state.batchMetadata["batch1"])
         XCTAssertEqual(metadata2.failureCount, 2)
 
         // Advance past second backoff
-        let backoffTime2 = metadata2.nextRetryTime!
-        timeProvider.setTime(backoffTime2 + 1)
+        let backoffTime2 = try XCTUnwrap(metadata2.nextRetryTime)
+        self.timeProvider.setTime(backoffTime2 + 1)
 
         // Attempt 3: 200 success
         let response3 = ResponseInfo(
@@ -137,13 +137,13 @@ class RetryChain_Tests: XCTestCase {
             batchFile: "batch1",
             currentTime: timeProvider.now()
         )
-        state = stateMachine.handleResponse(state: state, response: response3)
+        state = self.stateMachine.handleResponse(state: state, response: response3)
 
         // Verify: Metadata cleared
         XCTAssertTrue(state.batchMetadata.isEmpty)
 
         // Should allow upload
-        let (decision2, _) = stateMachine.shouldUploadBatch(state: state, batchFile: "batch1")
+        let (decision2, _) = self.stateMachine.shouldUploadBatch(state: state, batchFile: "batch1")
         if case .proceed = decision2 {
             XCTAssert(true)
         } else {

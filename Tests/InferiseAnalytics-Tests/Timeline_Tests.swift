@@ -9,7 +9,6 @@ import XCTest
 @testable import InferiseAnalytics
 
 class Timeline_Tests: XCTestCase {
-
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
     }
@@ -38,7 +37,7 @@ class Timeline_Tests: XCTestCase {
         wait(for: [expectation], timeout: 1.0)
     }
 
-    func testTwoBaseEventCreation() {
+    func testTwoBaseEventCreation() throws {
         let expectation = XCTestExpectation(description: "First")
         let expectationTrack2 = XCTestExpectation(description: "Second")
 
@@ -51,7 +50,6 @@ class Timeline_Tests: XCTestCase {
             return true
         }
 
-        
         // Do this to force enable the destination
         let writeKey1 = uniqueWriteKey()
         var settings = Settings(writeKey: writeKey1)
@@ -59,7 +57,7 @@ class Timeline_Tests: XCTestCase {
             var newIntegrations = existing
             newIntegrations[firstDestination.key] = true
             newIntegrations[secondDestination.key] = true
-            settings.integrations = try! JSON(newIntegrations)
+            settings.integrations = try JSON(newIntegrations)
         }
         let configuration = Configuration(writeKey: writeKey1)
         configuration.defaultSettings(settings)
@@ -75,7 +73,7 @@ class Timeline_Tests: XCTestCase {
         wait(for: [expectation, expectationTrack2], timeout: 1.0)
     }
 
-    func testTwoBaseEventCreationFirstFail() {
+    func testTwoBaseEventCreationFirstFail() throws {
         let expectation = XCTestExpectation(description: "First")
         let expectationTrack2 = XCTestExpectation(description: "Second")
 
@@ -88,7 +86,6 @@ class Timeline_Tests: XCTestCase {
             return true
         }
 
-
         // Do this to force enable the destination
         let writeKey2 = uniqueWriteKey()
         var settings = Settings(writeKey: writeKey2)
@@ -96,7 +93,7 @@ class Timeline_Tests: XCTestCase {
             var newIntegrations = existing
             newIntegrations[firstDestination.key] = true
             newIntegrations[secondDestination.key] = true
-            settings.integrations = try! JSON(newIntegrations)
+            settings.integrations = try JSON(newIntegrations)
         }
         let configuration = Configuration(writeKey: writeKey2)
         configuration.defaultSettings(settings)
@@ -112,19 +109,19 @@ class Timeline_Tests: XCTestCase {
         wait(for: [expectation, expectationTrack2], timeout: 1.0)
     }
 
-    // Regression guard for the Mediator plugin-array thread-safety fix.
-    // Without a lock on Mediator.plugins, two writers adding plugins while
-    // a third thread iterates the array for event execution triggers a
-    // copy-on-write reallocation that releases storage the iterator still
-    // holds, producing _swift_release_dealloc / EXC_BAD_ACCESS in release
-    // builds.
-    //
-    // Exercises the Mediator directly to isolate the race from the rest of
-    // the pipeline and keep the test fast.
+    /// Regression guard for the Mediator plugin-array thread-safety fix.
+    /// Without a lock on Mediator.plugins, two writers adding plugins while
+    /// a third thread iterates the array for event execution triggers a
+    /// copy-on-write reallocation that releases storage the iterator still
+    /// holds, producing _swift_release_dealloc / EXC_BAD_ACCESS in release
+    /// builds.
+    ///
+    /// Exercises the Mediator directly to isolate the race from the rest of
+    /// the pipeline and keep the test fast.
     func testConcurrentPluginMutationAndExecute() {
         let mediator = Mediator()
         let writes = 500
-        let reads = 1_000
+        let reads = 1000
         let done = expectation(description: "concurrent workers complete")
         done.expectedFulfillmentCount = 3
 
@@ -154,10 +151,10 @@ class Timeline_Tests: XCTestCase {
         wait(for: [done], timeout: 10.0)
     }
 
-    // Exercises every Mediator entry point directly on a single thread to
-    // ensure the locked critical sections (including remove) and the
-    // snapshot getter are covered. Complements testConcurrentPluginMutationAndExecute
-    // which focuses on the concurrency guarantee rather than line coverage.
+    /// Exercises every Mediator entry point directly on a single thread to
+    /// ensure the locked critical sections (including remove) and the
+    /// snapshot getter are covered. Complements testConcurrentPluginMutationAndExecute
+    /// which focuses on the concurrency guarantee rather than line coverage.
     func testMediatorAddRemoveExecuteSingleThread() {
         let mediator = Mediator()
         let dummyEvent = TrackEvent(event: "coverage", properties: nil)
@@ -186,5 +183,4 @@ class Timeline_Tests: XCTestCase {
         mediator.remove(plugin: ziggy)
         XCTAssertTrue(mediator.plugins.isEmpty)
     }
-
 }

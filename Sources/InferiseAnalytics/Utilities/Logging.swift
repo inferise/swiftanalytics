@@ -1,6 +1,6 @@
 //
 //  Logging.swift
-//  
+//
 //
 //  Created by Brandon Sneed on 3/9/23.
 //
@@ -13,33 +13,38 @@ extension Analytics {
         case warning
         case debug
         case none
-        
-        public var description: String { return string }
-        public var debugDescription: String { return string }
+
+        public var description: String {
+            self.string
+        }
+
+        public var debugDescription: String {
+            self.string
+        }
 
         var string: String {
             switch self {
             case .error:
-                return "SEG_ERROR: "
+                "SEG_ERROR: "
             case .warning:
-                return "SEG_WARNING: "
+                "SEG_WARNING: "
             case .debug:
-                return "SEG_DEBUG: "
+                "SEG_DEBUG: "
             case .none:
-                return "SEG_INFO: "
+                "SEG_INFO: "
             }
         }
     }
-    
+
     public func log(message: String) {
         Self.inferiseLog(message: message, kind: .none)
     }
-    
+
     static public func inferiseLog(message: String, kind: LogKind) {
         #if DEBUG
-        if Self.debugLogsEnabled {
-            print("\(kind)\(message)")
-        }
+            if debugLogsEnabled {
+                print("\(kind)\(message)")
+            }
         #endif
     }
 }

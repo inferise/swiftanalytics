@@ -15,27 +15,27 @@ extension Analytics {
     /// call `resumeEventProcessing(plugin:)` when you've completed your task.
     public func pauseEventProcessing(plugin: WaitingPlugin) {
         store.dispatch(action: System.AddWaitingPlugin(plugin: plugin))
-        pauseEventProcessing()
+        self.pauseEventProcessing()
     }
-    
+
     /// Resume event processing.  Any queued events will be replayed into the system
     /// using their original timestamps.
     public func resumeEventProcessing(plugin: WaitingPlugin) {
         store.dispatch(action: System.RemoveWaitingPlugin(plugin: plugin))
-        resumeEventProcessing()
+        self.resumeEventProcessing()
     }
 }
 
 extension Analytics {
-    internal func running() -> Bool {
+    func running() -> Bool {
         if let system: System = store.currentState() {
             return system.running
         }
         // we have no state, so assume no.
         return false
     }
-    
-    internal func pauseEventProcessing() {
+
+    func pauseEventProcessing() {
         let running = running()
         // if we're already paused, ignore and leave.
         if !running {
@@ -45,10 +45,10 @@ extension Analytics {
         store.dispatch(action: System.ToggleRunningAction(running: false))
         // if we WERE running, someone stopped us, set a timer for
         // 30 seconds so they can't keep the system stopped forever.
-        startProcessingAfterTimeout()
+        self.startProcessingAfterTimeout()
     }
-    
-    internal func resumeEventProcessing() {
+
+    func resumeEventProcessing() {
         let running = running()
         // if we're already running, ignore and leave.
         if running {
@@ -56,8 +56,8 @@ extension Analytics {
         }
         store.dispatch(action: System.ToggleRunningAction(running: true))
     }
-    
-    internal func startProcessingAfterTimeout() {
+
+    func startProcessingAfterTimeout() {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.processingTimer?.cancel()

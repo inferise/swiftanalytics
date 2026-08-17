@@ -17,25 +17,24 @@ import XCTest
 @testable import InferiseAnalytics
 
 class DirectoryStore_Hardening_Tests: XCTestCase {
-
     var storageURL: URL!
     var store: DirectoryStore!
 
     override func setUpWithError() throws {
-        storageURL = URL(fileURLWithPath: NSTemporaryDirectory())
+        self.storageURL = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("inferise-hardening-tests")
-        try FileManager.default.createDirectory(at: storageURL, withIntermediateDirectories: true)
-        store = DirectoryStore(configuration: DirectoryStore.Configuration(
+        try FileManager.default.createDirectory(at: self.storageURL, withIntermediateDirectories: true)
+        self.store = DirectoryStore(configuration: DirectoryStore.Configuration(
             writeKey: "hardening-test",
-            storageLocation: storageURL,
+            storageLocation: self.storageURL,
             baseFilename: "inferise-events",
-            maxFileSize: 475000,
+            maxFileSize: 475_000,
             indexKey: "hardening.events"
         ))
     }
 
     override func tearDownWithError() throws {
-        try? FileManager.default.removeItem(at: storageURL)
+        try? FileManager.default.removeItem(at: self.storageURL)
         UserDefaults(suiteName: "com.inferise.storage.hardening-test")?
             .removePersistentDomain(forName: "com.inferise.storage.hardening-test")
     }
@@ -47,21 +46,21 @@ class DirectoryStore_Hardening_Tests: XCTestCase {
     /// the same file and write events after the closing bracket, corrupting the batch.
     func testCrashRecoverySkipsFinalizedFile() throws {
         // Pre-write a finalized file at index 0 — simulates the crash scenario.
-        let finalizedFileURL = storageURL.appendingPathComponent("0-inferise-events")
+        let finalizedFileURL = self.storageURL.appendingPathComponent("0-inferise-events")
         let finalizedContent = "{ \"batch\": [\n{\"type\":\"track\",\"event\":\"CrashEvent\",\"messageId\":\"DEAD-BEEF\"}\n],\"sentAt\":\"2026-01-01T00:00:00.000Z\",\"writeKey\":\"hardening-test\"}"
         try finalizedContent.write(to: finalizedFileURL, atomically: true, encoding: .utf8)
 
         // Append a new event — should detect index 0 is finalized and use index 1.
         let event = TrackEvent(event: "PostCrashEvent", properties: nil)
-        store.append(data: event)
+        self.store.append(data: event)
 
-        let result = store.fetch(count: nil, maxBytes: nil)
+        let result = self.store.fetch(count: nil, maxBytes: nil)
 
         XCTAssertNotNil(result, "Should have a result after appending past finalized file")
-        XCTAssertFalse(result!.dataFiles!.isEmpty)
+        XCTAssertFalse(try XCTUnwrap(result?.dataFiles?.isEmpty))
 
         // New events must land in index 1, not index 0.
-        let uploadedFile = result!.dataFiles!.first!
+        let uploadedFile = try XCTUnwrap(result?.dataFiles?.first)
         XCTAssertTrue(
             uploadedFile.lastPathComponent.hasPrefix("1-"),
             "Expected events in index 1 file, got: \(uploadedFile.lastPathComponent)"
@@ -69,8 +68,8 @@ class DirectoryStore_Hardening_Tests: XCTestCase {
 
         // Verify the uploaded file contains only the post-crash event.
         let data = try Data(contentsOf: uploadedFile)
-        let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
-        let batch = json["batch"] as! [[String: Any]]
+        let json = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let batch = try XCTUnwrap(json["batch"] as? [[String: Any]])
         XCTAssertEqual(batch.count, 1)
         XCTAssertEqual(batch[0]["event"] as? String, "PostCrashEvent")
 
@@ -86,18 +85,18 @@ class DirectoryStore_Hardening_Tests: XCTestCase {
     /// resume appending to it, not abandon it.
     func testCrashRecoveryResumesUnfinishedFile() throws {
         // Write a partial file at index 0 — no sentAt footer means not finalized.
-        let partialFileURL = storageURL.appendingPathComponent("0-inferise-events")
+        let partialFileURL = self.storageURL.appendingPathComponent("0-inferise-events")
         let partialContent = "{ \"batch\": [\n{\"type\":\"track\",\"event\":\"PartialEvent\",\"messageId\":\"PART-1\"}"
         try partialContent.write(to: partialFileURL, atomically: true, encoding: .utf8)
 
         // Append a new event — should resume into index 0, not skip to index 1.
         let event = TrackEvent(event: "ResumedEvent", properties: nil)
-        store.append(data: event)
+        self.store.append(data: event)
 
-        let result = store.fetch(count: nil, maxBytes: nil)
+        let result = self.store.fetch(count: nil, maxBytes: nil)
 
         XCTAssertNotNil(result)
-        let uploadedFile = result!.dataFiles!.first!
+        let uploadedFile = try XCTUnwrap(result?.dataFiles?.first)
 
         XCTAssertTrue(
             uploadedFile.lastPathComponent.hasPrefix("0-"),

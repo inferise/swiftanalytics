@@ -9,50 +9,50 @@ import Foundation
 
 #if os(Linux)
 
-class LinuxVendorSystem: VendorSystem {
-    override var manufacturer: String {
-        return "unknown"
+    class LinuxVendorSystem: VendorSystem {
+        override var manufacturer: String {
+            "unknown"
+        }
+
+        override var type: String {
+            "Linux"
+        }
+
+        override var model: String {
+            "unknown"
+        }
+
+        override var name: String {
+            "unknown"
+        }
+
+        override var identifierForVendor: String? {
+            nil
+        }
+
+        override var systemName: String {
+            "unknown"
+        }
+
+        override var systemVersion: String {
+            ""
+        }
+
+        override var screenSize: ScreenSize {
+            ScreenSize(width: 0, height: 0)
+        }
+
+        override var userAgent: String? {
+            UserAgent.value
+        }
+
+        override var connection: ConnectionStatus {
+            ConnectionStatus.unknown
+        }
+
+        override var requiredPlugins: [PlatformPlugin] {
+            []
+        }
     }
-    
-    override var type: String {
-        return "Linux"
-    }
-    
-    override var model: String {
-        return "unknown"
-    }
-    
-    override var name: String {
-        return "unknown"
-    }
-    
-    override var identifierForVendor: String? {
-        return nil
-    }
-    
-    override var systemName: String {
-        return "unknown"
-    }
-    
-    override var systemVersion: String {
-        return ""
-    }
-    
-    override var screenSize: ScreenSize {
-        return ScreenSize(width: 0, height: 0)
-    }
-    
-    override var userAgent: String? {
-        return UserAgent.value
-    }
-    
-    override var connection: ConnectionStatus {
-        return ConnectionStatus.unknown
-    }
-    
-    override var requiredPlugins: [PlatformPlugin] {
-        return []
-    }
-}
 
 #endif

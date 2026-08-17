@@ -14,4 +14,4 @@
 
 // BREAKING.FEATURE.FIX
 
-internal let __sovran_version = "1.1.2"
+let __sovran_version = "1.1.2"

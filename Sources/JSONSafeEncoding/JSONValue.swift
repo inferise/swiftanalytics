@@ -11,15 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 /** --------------------------------------------------------------------------------------------
-TWILIO NOTICE: Filenames and functionality have been modified from their original counterparts @
-https://github.com/apple/swift-corelibs-foundation/blob/main/Sources/Foundation/JSONEncoder.swift
+ TWILIO NOTICE: Filenames and functionality have been modified from their original counterparts @
+ https://github.com/apple/swift-corelibs-foundation/blob/main/Sources/Foundation/JSONEncoder.swift
 
-Copyright (c) 2023 Twilio Inc.
----------------------------------------------------------------------------------------------**/
+ Copyright (c) 2023 Twilio Inc.
+ ---------------------------------------------------------------------------------------------**/
 
 import Foundation
 
-internal enum JSONValue: Equatable {
+enum JSONValue: Equatable {
     case string(String)
     case number(String)
     case bool(Bool)
@@ -33,18 +33,18 @@ extension JSONValue {
     var isValue: Bool {
         switch self {
         case .array, .object:
-            return false
+            false
         case .null, .number, .string, .bool:
-            return true
+            true
         }
     }
 
     var isContainer: Bool {
         switch self {
         case .array, .object:
-            return true
+            true
         case .null, .number, .string, .bool:
-            return false
+            false
         }
     }
 }
@@ -53,23 +53,23 @@ extension JSONValue {
     var debugDataTypeDescription: String {
         switch self {
         case .array:
-            return "an array"
+            "an array"
         case .bool:
-            return "bool"
+            "bool"
         case .number:
-            return "a number"
+            "a number"
         case .string:
-            return "a string"
+            "a string"
         case .object:
-            return "a dictionary"
+            "a dictionary"
         case .null:
-            return "null"
+            "null"
         }
     }
 }
 
-private extension JSONValue {
-    func toObjcRepresentation(options: JSONSerialization.ReadingOptions) throws -> Any {
+extension JSONValue {
+    private func toObjcRepresentation(options: JSONSerialization.ReadingOptions) throws -> Any {
         switch self {
         case .array(let values):
             let array = try values.map { try $0.toObjcRepresentation(options: options) }

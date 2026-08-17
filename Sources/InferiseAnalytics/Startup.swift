@@ -9,8 +9,7 @@ import Foundation
 import Sovran
 
 extension Analytics: Subscriber {
-
-    internal func platformStartup() {
+    func platformStartup() {
         add(plugin: StartupQueue())
 
         // add the Inferise destination plugin unless
@@ -38,7 +37,7 @@ extension Analytics: Subscriber {
         setupSettingsCheck()
     }
 
-    internal func platformPlugins() -> [PlatformPlugin]? {
+    func platformPlugins() -> [PlatformPlugin]? {
         var plugins = [PlatformPlugin]()
 
         // add context plugin as well as it's platform specific internally.
@@ -50,20 +49,20 @@ extension Analytics: Subscriber {
         // setup lifecycle if desired
         if configuration.values.trackedApplicationLifecycleEvents != .none, operatingMode != .synchronous {
             #if os(iOS) || os(tvOS) || os(visionOS) || os(visionOS)
-            plugins.append(iOSLifecycleEvents())
+                plugins.append(iOSLifecycleEvents())
             #endif
             #if os(watchOS)
-            plugins.append(watchOSLifecycleEvents())
+                plugins.append(watchOSLifecycleEvents())
             #endif
             #if os(macOS)
-            plugins.append(macOSLifecycleEvents())
+                plugins.append(macOSLifecycleEvents())
             #endif
             #if os(Linux)
-            // placeholder - not sure what this is yet
-            //plugins.append(LinuxLifecycleMonitor())
+                // placeholder - not sure what this is yet
+                // plugins.append(LinuxLifecycleMonitor())
             #endif
             #if os(Windows)
-            // placeholder - not sure what this is yet
+                // placeholder - not sure what this is yet
             #endif
         }
 
@@ -76,51 +75,53 @@ extension Analytics: Subscriber {
 }
 
 #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
-import UIKit
-extension Analytics {
-    internal func setupSettingsCheck() {
-        // do the first one
-        checkSettings()
-        // set up return-from-background to do it again.
-        NotificationCenter.default.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: OperationQueue.main) { [weak self] (notification) in
-            guard let app = notification.object as? UIApplication else { return }
-            if app.applicationState == .background {
+    import UIKit
+
+    extension Analytics {
+        func setupSettingsCheck() {
+            // do the first one
+            checkSettings()
+            // set up return-from-background to do it again.
+            NotificationCenter.default.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: OperationQueue.main) { [weak self] notification in
+                guard let app = notification.object as? UIApplication else { return }
+                if app.applicationState == .background {
+                    self?.checkSettingsIfNeeded()
+                }
+            }
+        }
+    }
+#elseif os(watchOS)
+    extension Analytics {
+        func setupSettingsCheck() {
+            // TBD: we don't know what to do here yet.
+            checkSettings()
+        }
+    }
+#elseif os(macOS)
+    import Cocoa
+
+    extension Analytics {
+        func setupSettingsCheck() {
+            // do the first one
+            checkSettings()
+            // now set up a timer to do it every 24 hrs.
+            // mac apps change focus a lot more than iOS apps, so this
+            // seems more appropriate here.
+            QueueTimer.schedule(interval: .days(1), queue: .main) { [weak self] in
                 self?.checkSettingsIfNeeded()
             }
         }
     }
-}
-#elseif os(watchOS)
-extension Analytics {
-    internal func setupSettingsCheck() {
-        // TBD: we don't know what to do here yet.
-        checkSettings()
-    }
-}
-#elseif os(macOS)
-import Cocoa
-extension Analytics {
-    internal func setupSettingsCheck() {
-        // do the first one
-        checkSettings()
-        // now set up a timer to do it every 24 hrs.
-        // mac apps change focus a lot more than iOS apps, so this
-        // seems more appropriate here.
-        QueueTimer.schedule(interval: .days(1), queue: .main) { [weak self] in
-            self?.checkSettingsIfNeeded()
+#elseif os(Linux)
+    extension Analytics {
+        func setupSettingsCheck() {
+            checkSettings()
         }
     }
-}
-#elseif os(Linux)
-extension Analytics {
-    internal func setupSettingsCheck() {
-        checkSettings()
-    }
-}
 #elseif os(Windows)
-extension Analytics {
-    internal func setupSettingsCheck() {
-        checkSettings()
+    extension Analytics {
+        func setupSettingsCheck() {
+            checkSettings()
+        }
     }
-}
 #endif

@@ -70,18 +70,6 @@ Device-mode destinations for third-party vendors (Firebase, Mixpanel, Amplitude,
 …) are not yet ported. Each is a `DestinationPlugin` that forwards events into
 that vendor's SDK; `ExampleDestination.swift` is the template.
 
-## Objective-C
-
-The public API is bridged with an `INF` prefix:
-
-```objc
-@import InferiseAnalytics;
-
-INFConfiguration *config = [[INFConfiguration alloc] initWithWriteKey:@"<WRITE KEY>"];
-INFAnalytics *analytics = [[INFAnalytics alloc] initWithConfiguration:config];
-[analytics track:@"Order Completed"];
-```
-
 ## Vendored dependencies
 
 `Sovran` (state store) and `JSONSafeEncoding` (NaN/Infinity-safe JSON) are
@@ -91,8 +79,8 @@ origin, version, and any local modifications.
 
 ## Examples
 
-[`Examples/apps`](Examples/apps) covers UIKit, SwiftUI, macOS, watchOS,
-Objective-C, and app-extension/widget setups.
+[`Examples/apps`](Examples/apps) covers UIKit, SwiftUI, macOS, watchOS, and
+app-extension/widget setups.
 
 ## Contributing
 

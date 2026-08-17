@@ -25,7 +25,7 @@ public protocol RawEvent: Codable {
     var messageId: String? { get set }
     var userId: String? { get set }
     var timestamp: String? { get set }
-    
+
     var context: JSON? { get set }
     var integrations: JSON? { get set }
     var metrics: [JSON]? { get set }
@@ -33,131 +33,130 @@ public protocol RawEvent: Codable {
 }
 
 public struct TrackEvent: RawEvent {
-    @Noncodable public var enrichments: [EnrichmentClosure]? = nil
+    @Noncodable public var enrichments: [EnrichmentClosure]?
     public var type: String? = "track"
-    public var anonymousId: String? = nil
-    public var messageId: String? = nil
-    public var userId: String? = nil
-    public var timestamp: String? = nil
-    public var context: JSON? = nil
-    public var integrations: JSON? = nil
-    public var metrics: [JSON]? = nil
-    public var _metadata: DestinationMetadata? = nil
-    
+    public var anonymousId: String?
+    public var messageId: String?
+    public var userId: String?
+    public var timestamp: String?
+    public var context: JSON?
+    public var integrations: JSON?
+    public var metrics: [JSON]?
+    public var _metadata: DestinationMetadata?
+
     public var event: String
     public var properties: JSON?
-    
+
     public init(event: String, properties: JSON?) {
         self.event = event
         self.properties = properties
     }
-    
-    public init(existing: TrackEvent) {
+
+    public init(existing: Self) {
         self.init(event: existing.event, properties: existing.properties)
         applyRawEventData(event: existing)
     }
 }
 
 public struct IdentifyEvent: RawEvent {
-    @Noncodable public var enrichments: [EnrichmentClosure]? = nil
+    @Noncodable public var enrichments: [EnrichmentClosure]?
     public var type: String? = "identify"
-    public var anonymousId: String? = nil
-    public var messageId: String? = nil
+    public var anonymousId: String?
+    public var messageId: String?
     public var userId: String?
-    public var timestamp: String? = nil
-    public var context: JSON? = nil
-    public var integrations: JSON? = nil
-    public var metrics: [JSON]? = nil
-    public var _metadata: DestinationMetadata? = nil
-    
+    public var timestamp: String?
+    public var context: JSON?
+    public var integrations: JSON?
+    public var metrics: [JSON]?
+    public var _metadata: DestinationMetadata?
+
     public var traits: JSON?
-    
-    
+
     public init(userId: String? = nil, traits: JSON? = nil) {
         self.userId = userId
         self.traits = traits
     }
-    
-    public init(existing: IdentifyEvent) {
+
+    public init(existing: Self) {
         self.init(userId: existing.userId, traits: existing.traits)
         applyRawEventData(event: existing)
     }
 }
 
 public struct ScreenEvent: RawEvent {
-    @Noncodable public var enrichments: [EnrichmentClosure]? = nil
+    @Noncodable public var enrichments: [EnrichmentClosure]?
     public var type: String? = "screen"
-    public var anonymousId: String? = nil
-    public var messageId: String? = nil
-    public var userId: String? = nil
-    public var timestamp: String? = nil
-    public var context: JSON? = nil
-    public var integrations: JSON? = nil
-    public var metrics: [JSON]? = nil
-    public var _metadata: DestinationMetadata? = nil
-    
+    public var anonymousId: String?
+    public var messageId: String?
+    public var userId: String?
+    public var timestamp: String?
+    public var context: JSON?
+    public var integrations: JSON?
+    public var metrics: [JSON]?
+    public var _metadata: DestinationMetadata?
+
     public var name: String?
     public var category: String?
     public var properties: JSON?
-    
+
     public init(title: String? = nil, category: String?, properties: JSON? = nil) {
         self.name = title
         self.category = category
         self.properties = properties
     }
-    
-    public init(existing: ScreenEvent) {
+
+    public init(existing: Self) {
         self.init(title: existing.name, category: existing.category, properties: existing.properties)
         applyRawEventData(event: existing)
     }
 }
 
 public struct GroupEvent: RawEvent {
-    @Noncodable public var enrichments: [EnrichmentClosure]? = nil
+    @Noncodable public var enrichments: [EnrichmentClosure]?
     public var type: String? = "group"
-    public var anonymousId: String? = nil
-    public var messageId: String? = nil
-    public var userId: String? = nil
-    public var timestamp: String? = nil
-    public var context: JSON? = nil
-    public var integrations: JSON? = nil
-    public var metrics: [JSON]? = nil
-    public var _metadata: DestinationMetadata? = nil
-    
+    public var anonymousId: String?
+    public var messageId: String?
+    public var userId: String?
+    public var timestamp: String?
+    public var context: JSON?
+    public var integrations: JSON?
+    public var metrics: [JSON]?
+    public var _metadata: DestinationMetadata?
+
     public var groupId: String?
     public var traits: JSON?
-    
+
     public init(groupId: String? = nil, traits: JSON? = nil) {
         self.groupId = groupId
         self.traits = traits
     }
-    
-    public init(existing: GroupEvent) {
+
+    public init(existing: Self) {
         self.init(groupId: existing.groupId, traits: existing.traits)
         applyRawEventData(event: existing)
     }
 }
 
 public struct AliasEvent: RawEvent {
-    @Noncodable public var enrichments: [EnrichmentClosure]? = nil
+    @Noncodable public var enrichments: [EnrichmentClosure]?
     public var type: String? = "alias"
-    public var anonymousId: String? = nil
-    public var messageId: String? = nil
-    public var timestamp: String? = nil
-    public var context: JSON? = nil
-    public var integrations: JSON? = nil
-    public var metrics: [JSON]? = nil
-    public var _metadata: DestinationMetadata? = nil
-    
-    public var userId: String? = nil
-    public var previousId: String? = nil
-    
+    public var anonymousId: String?
+    public var messageId: String?
+    public var timestamp: String?
+    public var context: JSON?
+    public var integrations: JSON?
+    public var metrics: [JSON]?
+    public var _metadata: DestinationMetadata?
+
+    public var userId: String?
+    public var previousId: String?
+
     public init(newId: String?, previousId: String? = nil) {
         self.userId = newId
         self.previousId = previousId
     }
-    
-    public init(existing: AliasEvent) {
+
+    public init(existing: Self) {
         self.init(newId: existing.userId, previousId: existing.previousId)
         applyRawEventData(event: existing)
     }
@@ -165,7 +164,7 @@ public struct AliasEvent: RawEvent {
 
 // MARK: - RawEvent conveniences
 
-internal struct IntegrationConstants {
+enum IntegrationConstants {
     static let allIntegrationsKey = "All"
 }
 
@@ -184,7 +183,7 @@ extension RawEvent {
         }
         var new = [String: Any]()
         new[IntegrationConstants.allIntegrationsKey] = false
-        if let exceptKeys = exceptKeys {
+        if let exceptKeys {
             for key in exceptKeys {
                 if let value = existing[key], value is [String: Any] {
                     new[key] = value
@@ -193,7 +192,7 @@ extension RawEvent {
                 }
             }
         }
-        
+
         do {
             integrations = try JSON(new)
         } catch {
@@ -201,7 +200,7 @@ extension RawEvent {
             Analytics.inferiseLog(message: "Unable to convert list of integrations to JSON. \(error)", kind: .error)
         }
     }
-    
+
     /**
      Enable all cloud-mode integrations for this event, except for any specific keys given.
      - Parameters:
@@ -210,12 +209,12 @@ extension RawEvent {
     public mutating func enableCloudIntegrations(exceptKeys: [String]? = nil) {
         var new = [String: Any]()
         new[IntegrationConstants.allIntegrationsKey] = true
-        if let exceptKeys = exceptKeys {
+        if let exceptKeys {
             for key in exceptKeys {
                 new[key] = false
             }
         }
-        
+
         do {
             integrations = try JSON(new)
         } catch {
@@ -223,7 +222,7 @@ extension RawEvent {
             Analytics.inferiseLog(message: "Unable to convert list of integrations to JSON. \(error)", kind: .error)
         }
     }
-    
+
     /**
      Disable a specific cloud-mode integration using it's key name.
      - Parameters:
@@ -239,7 +238,7 @@ extension RawEvent {
         // a disabled one can only be false.
         var new = existing
         new[key] = false
-        
+
         do {
             integrations = try JSON(new)
         } catch {
@@ -247,7 +246,7 @@ extension RawEvent {
             Analytics.inferiseLog(message: "Unable to convert list of integrations to JSON. \(error)", kind: .error)
         }
     }
-    
+
     /**
      Enable a specific cloud-mode integration using it's key name.
      - Parameters:
@@ -259,7 +258,7 @@ extension RawEvent {
             Analytics.inferiseLog(message: "Unable to get what should be a valid list of integrations from event.", kind: .error)
             return
         }
-        
+
         var new = existing
         // if it's a dictionary already, it's considered enabled, so don't
         // overwrite whatever they may have put there.  If that's not the case
@@ -268,7 +267,7 @@ extension RawEvent {
         if (existing[key] as? [String: Any]) == nil {
             new[key] = true
         }
-        
+
         do {
             integrations = try JSON(new)
         } catch {
@@ -276,14 +275,12 @@ extension RawEvent {
             Analytics.inferiseLog(message: "Unable to convert list of integrations to JSON. \(error)", kind: .error)
         }
     }
-    
 }
-
 
 // MARK: - RawEvent data helpers
 
 extension RawEvent {
-    internal mutating func applyRawEventData(event: RawEvent?) {
+    mutating func applyRawEventData(event: RawEvent?) {
         if let e = event {
             anonymousId = e.anonymousId
             messageId = e.messageId
@@ -295,11 +292,11 @@ extension RawEvent {
         }
     }
 
-    internal func applyRawEventData(store: Store, enrichments: [EnrichmentClosure]?) -> Self {
+    func applyRawEventData(store: Store, enrichments: [EnrichmentClosure]?) -> Self {
         var result: Self = self
-        
+
         guard let userInfo: UserInfo = store.currentState() else { return self }
-        
+
         result.enrichments = enrichments
         result.anonymousId = userInfo.anonymousId
         result.userId = userInfo.userId
@@ -307,7 +304,7 @@ extension RawEvent {
         result.timestamp = Date().iso8601()
         result.integrations = try? JSON([String: Any]())
         result._metadata = DestinationMetadata()
-        
+
         return result
     }
 }

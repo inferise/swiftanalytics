@@ -4,11 +4,10 @@ import XCTest
 // i'm leaving it here because of the unusual deprecation
 // messages `swift test` is producing.
 
-/*#if !canImport(ObjectiveC)
-public func allTests() -> [XCTestCaseEntry] {
-    return [
-        testCase(InferiseAnalytics_Tests.allTests),
-    ]
-}
-#endif*/
-
+/* #if !canImport(ObjectiveC)
+ public func allTests() -> [XCTestCaseEntry] {
+     return [
+         testCase(InferiseAnalytics_Tests.allTests),
+     ]
+ }
+ #endif */
