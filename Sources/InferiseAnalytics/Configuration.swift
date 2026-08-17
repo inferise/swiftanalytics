@@ -1,0 +1,381 @@
+//
+//  Configuration.swift
+//  InferiseAnalytics
+//
+//  Created by Brandon Sneed on 11/17/20.
+//
+
+import Foundation
+import JSONSafeEncoding
+
+#if os(Linux) || os(Windows)
+    import FoundationNetworking
+#endif
+
+// MARK: - Custom AnonymousId generator
+/// Conform to this protocol to generate your own AnonymousID
+public protocol AnonymousIdGenerator: AnyObject, Codable {
+    /// Returns a new anonymousId.  The SDK still manages storage and retrieval of the
+    /// current anonymousId and will call this method when new id's are needed.
+    ///
+    /// - Returns: A new anonymousId.
+    func newAnonymousId() -> String
+}
+
+// MARK: - Operating Mode
+/// Specifies the operating mode/context
+public enum OperatingMode {
+    /// The operation of the Analytics client are synchronous.
+    case synchronous
+    /// The operation of the Analytics client are asynchronous.
+    case asynchronous
+
+    static internal let defaultQueue = DispatchQueue(
+        label: "com.inferise.operatingModeQueue", qos: .utility)
+}
+
+// MARK: - Storage Mode
+/// Specifies the storage mode to be used for events
+public enum StorageMode {
+    /// Store events to disk (default).
+    case disk
+    /// Store events to disk in the given a directory URL.
+    case diskAtURL(URL)
+    /// Store events to memory and specify a max count before they roll off.
+    case memory(Int)
+    /// Some custom, user-defined storage mechanism conforming to `DataStore`.
+    case custom(any DataStore)
+}
+
+// MARK: - Internal Configuration
+
+public final class TrackedLifecycleEvent: NSObject, OptionSet {
+    public let rawValue: Int
+
+    public init(rawValue: Int) {
+        self.rawValue = rawValue
+    }
+
+    public override func isEqual(_ object: Any?) -> Bool {
+        (object as? Self)?.rawValue == rawValue
+    }
+
+    public override var hash: Int {
+        rawValue.hashValue
+    }
+
+    public static let none: TrackedLifecycleEvent = []
+    public static let applicationInstalled = TrackedLifecycleEvent(rawValue: 1 << 0)
+    public static let applicationUpdated = TrackedLifecycleEvent(rawValue: 1 << 1)
+    public static let applicationOpened = TrackedLifecycleEvent(rawValue: 1 << 2)
+    public static let applicationBackgrounded = TrackedLifecycleEvent(rawValue: 1 << 3)
+    public static let applicationForegrounded = TrackedLifecycleEvent(rawValue: 1 << 4)
+    #if os(macOS)
+        public static let applicationUnhidden = TrackedLifecycleEvent(rawValue: 1 << 5)
+        public static let applicationHidden = TrackedLifecycleEvent(rawValue: 1 << 6)
+        public static let applicationTerminated = TrackedLifecycleEvent(rawValue: 1 << 7)
+
+        public static let all: TrackedLifecycleEvent = [
+            .applicationInstalled,
+            .applicationUpdated,
+            .applicationOpened,
+            .applicationBackgrounded,
+            .applicationForegrounded,
+            .applicationUnhidden,
+            .applicationHidden,
+            .applicationTerminated,
+        ]
+    #elseif os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
+        public static let all: TrackedLifecycleEvent = [
+            .applicationInstalled,
+            .applicationUpdated,
+            .applicationOpened,
+            .applicationBackgrounded,
+            .applicationForegrounded,
+        ]
+    #elseif os(watchOS)
+        public static let all: TrackedLifecycleEvent = [
+            .applicationInstalled,
+            .applicationUpdated,
+            .applicationOpened,
+            .applicationBackgrounded,
+        ]
+    #else
+        public static let all = TrackedLifecycleEvent.none
+    #endif
+}
+
+public class Configuration {
+    internal struct Values {
+        var writeKey: String
+        var application: Any? = nil
+        var trackedApplicationLifecycleEvents = TrackedLifecycleEvent.all
+        var flushAt: Int = 20
+        var flushInterval: TimeInterval = 30
+        var defaultSettings: Settings? = nil
+        var autoAddInferiseDestination: Bool = true
+        var apiHost: String = HTTPClient.getDefaultAPIHost()
+        var cdnHost: String = HTTPClient.getDefaultCDNHost()
+        var requestFactory: ((URLRequest) -> URLRequest)? = nil
+        var errorHandler: ((Error) -> Void)? = nil
+        var flushPolicies: [FlushPolicy] = [CountBasedFlushPolicy(), IntervalBasedFlushPolicy()]
+        var operatingMode: OperatingMode = .asynchronous
+        var flushQueue: DispatchQueue = OperatingMode.defaultQueue
+        var userAgent: String? = nil
+        var jsonNonConformingNumberStrategy: JSONSafeEncoder.NonConformingFloatEncodingStrategy =
+            .zero
+        var storageMode: StorageMode = .disk
+        var anonymousIdGenerator: AnonymousIdGenerator = InferiseAnonymousId()
+        var httpSession: (() -> any HTTPSession) = HTTPSessions.urlSession
+        var httpConfig: HttpConfig? = nil
+    }
+
+    internal var values: Values
+
+    /// Initialize a configuration object to pass along to an Analytics instance.
+    ///
+    /// - Parameter writeKey: Your Inferise write key value
+    public init(writeKey: String) {
+        self.values = Values(writeKey: writeKey)
+        JSON.jsonNonConformingNumberStrategy = self.values.jsonNonConformingNumberStrategy
+        // enable the Inferise destination by default
+        var settings = Settings(writeKey: writeKey)
+        settings.integrations = try? JSON([
+            InferiseDestination.Constants.integrationName.rawValue: true
+        ])
+
+        self.defaultSettings(settings)
+    }
+}
+
+// MARK: - Analytics Configuration
+
+extension Configuration {
+
+    /// Sets a reference to your application.  This can be useful in instances
+    /// where referring back to your application is necessary, such as within plugins
+    /// or async code.  The default value is `nil`.
+    ///
+    /// - Parameter value: A reference to your application.
+    /// - Returns: The current Configuration.
+    @discardableResult
+    public func application(_ value: Any?) -> Configuration {
+        values.application = value
+        return self
+    }
+
+    /// Opt-in/out of tracking lifecycle events.  The default value is `true`.
+    ///
+    /// - Parameter enabled: A bool value
+    /// - Returns: The current Configuration.
+    @discardableResult
+    @available(
+        *, deprecated,
+        message: "Use `setTrackedApplicationLifecycleEvents(_:)` for more granular control"
+    )
+    public func trackApplicationLifecycleEvents(_ enabled: Bool) -> Configuration {
+        values.trackedApplicationLifecycleEvents = enabled ? .all : .none
+        return self
+    }
+
+    /// Opt-in/out of tracking lifecycle events.  The default value is `.none`.
+    ///
+    /// - Parameter events: An option set of the events to track.
+    /// - Returns: The current Configuration.
+    @discardableResult
+    public func setTrackedApplicationLifecycleEvents(_ events: TrackedLifecycleEvent)
+        -> Configuration
+    {
+        values.trackedApplicationLifecycleEvents = events
+        return self
+    }
+
+    /// Set the number of events necessary to automatically flush. The default
+    /// value is `20`.
+    ///
+    /// - Parameter count: Event count to trigger a flush.
+    /// - Returns: The current Configuration.
+    @discardableResult
+    public func flushAt(_ count: Int) -> Configuration {
+        values.flushAt = count
+        return self
+    }
+
+    /// Set a time interval (in seconds) by which to trigger an automatic flush.
+    /// The default value is `30`.
+    ///
+    /// - Parameter interval: A time interval
+    /// - Returns: The current Configuration.
+    @discardableResult
+    public func flushInterval(_ interval: TimeInterval) -> Configuration {
+        values.flushInterval = interval
+        return self
+    }
+
+    /// Sets a default set of Settings.  Normally these come from the settings
+    /// endpoint at <apiHost>/projects/<writekey>/settings, however in instances such
+    /// as first app launch, it can be useful to have a pre-set batch of settings to
+    /// ensure that the proper destinations and other settings are enabled prior
+    /// to receiving them from the Settings endpoint.  The default is `nil`.
+    ///
+    /// You can retrieve a copy of your settings from the following URL:
+    ///
+    /// https://<cdnHost>/projects/<writekey>/settings
+    ///
+    /// Example:
+    /// ```
+    /// let defaults = Settings.load(resource: "myInferiseSettings.json")
+    /// let config = Configuration(writeKey: "1234").defaultSettings(defaults)
+    /// ```
+    ///
+    /// - Parameter settings:
+    /// - Returns: The current Configuration.
+    @discardableResult
+    public func defaultSettings(_ settings: Settings?) -> Configuration {
+        values.defaultSettings = settings
+        return self
+    }
+
+    /// Enable/Disable the automatic adding of Inferise as a destination.
+    /// This can be useful in instances such as Consent Management, or in device
+    /// mode only setups.  The default value is `true`.
+    ///
+    /// - Parameter value: true/false
+    /// - Returns: The current Configuration.
+    @discardableResult
+    public func autoAddInferiseDestination(_ value: Bool) -> Configuration {
+        values.autoAddInferiseDestination = value
+        return self
+    }
+
+    /// Sets an alternative API host.  This is useful when a proxy is in use, or
+    /// events need to be routed to certain locales at all times (such as the EU).
+    /// The default value is the Inferise ingest host.
+    ///
+    /// - Parameter value: A string representing the desired API host.
+    /// - Returns: The current Configuration.
+    @discardableResult
+    public func apiHost(_ value: String) -> Configuration {
+        values.apiHost = value
+        return self
+    }
+
+    /// Sets an alternative CDN host for settings retrieval. This is useful when
+    /// a proxy is in use, or settings need to be queried from certain locales at
+    /// all times (such as the EU). The default value is the Inferise ingest host.
+    ///
+    /// - Parameter value: A string representing the desired CDN host.
+    /// - Returns: The current Configuration.
+    @discardableResult
+    public func cdnHost(_ value: String) -> Configuration {
+        values.cdnHost = value
+        return self
+    }
+
+    /// Sets a block to be used when generating outgoing HTTP requests.  Useful in
+    /// proxying, or adding additional header information for outbound traffic.
+    ///
+    /// - Parameter value: A block to call when requests are made.
+    /// - Returns: The current Configuration.
+    @discardableResult
+    public func requestFactory(_ value: @escaping (URLRequest) -> URLRequest) -> Configuration {
+        values.requestFactory = value
+        return self
+    }
+
+    /// Sets an error handler to be called when errors are encountered by the analytics
+    /// library.  See `AnalyticsError` for a list of possible errors that can be
+    /// encountered.
+    ///
+    /// - Parameter value: A block to be called when an error occurs.
+    /// - Returns: The current Configuration.
+    @discardableResult
+    public func errorHandler(_ value: @escaping (Error) -> Void) -> Configuration {
+        values.errorHandler = value
+        return self
+    }
+
+    @discardableResult
+    public func flushPolicies(_ policies: [FlushPolicy]) -> Configuration {
+        values.flushPolicies = policies
+        return self
+    }
+
+    /// Informs the Analytics instance of its operating mode/context.
+    /// Use `.server` when operating in a web service, or when synchronous operation
+    /// is desired.  Use `.client` when operating in a long lived process,
+    /// desktop/mobile application.
+    @discardableResult
+    public func operatingMode(_ mode: OperatingMode) -> Configuration {
+        values.operatingMode = mode
+        return self
+    }
+
+    /// Specify a custom queue to use when performing a flush operation.  The default
+    /// value is an SDK owned background queue.
+    @discardableResult
+    public func flushQueue(_ queue: DispatchQueue) -> Configuration {
+        values.flushQueue = queue
+        return self
+    }
+
+    /// Specify a custom UserAgent string.  This bypasses the OS dependent check entirely.
+    @discardableResult
+    public func userAgent(_ userAgent: String) -> Configuration {
+        values.userAgent = userAgent
+        return self
+    }
+
+    /// This option specifies how NaN/Infinity are handled when encoding JSON.
+    /// The default is .zero.  See JSONSafeEncoder.NonConformingFloatEncodingStrategy for more informatino.
+    @discardableResult
+    public func jsonNonConformingNumberStrategy(
+        _ strategy: JSONSafeEncoder.NonConformingFloatEncodingStrategy
+    ) -> Configuration {
+        values.jsonNonConformingNumberStrategy = strategy
+        JSON.jsonNonConformingNumberStrategy = values.jsonNonConformingNumberStrategy
+        return self
+    }
+
+    /// Specify the storage mode to use.  The default is `.disk`.
+    @discardableResult
+    public func storageMode(_ mode: StorageMode) -> Configuration {
+        values.storageMode = mode
+        return self
+    }
+
+    /// Specify a custom anonymousId generator.  The default is and instance of `InferiseAnonymousId`.
+    @discardableResult
+    public func anonymousIdGenerator(_ generator: AnonymousIdGenerator) -> Configuration {
+        values.anonymousIdGenerator = generator
+        return self
+    }
+
+    /// Use a custom HTTP session; Useful for non-apple platforms where Swift networking isn't as mature
+    /// or has issues to work around.
+    /// - Parameter httpSession: A class conforming to the HTTPSession protocol
+    /// - Returns: The current configuration
+    @discardableResult
+    public func httpSession(_ httpSession: @escaping @autoclosure () -> any HTTPSession)
+        -> Configuration
+    {
+        values.httpSession = httpSession
+        return self
+    }
+
+    /// Sets HTTP retry configuration for rate limiting and exponential backoff.
+    /// When nil (default), retry system is disabled (legacy mode).
+    /// - Parameter config: HttpConfig with rate limit and backoff settings
+    /// - Returns: The current Configuration
+    @discardableResult
+    public func httpConfig(_ config: HttpConfig?) -> Configuration {
+        values.httpConfig = config
+        return self
+    }
+}
+
+extension Analytics {
+    func configuration<T>(valueFor: () -> T) -> T {
+        return valueFor()
+    }
+}
