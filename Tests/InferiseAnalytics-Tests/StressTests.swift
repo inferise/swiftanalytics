@@ -23,7 +23,8 @@
         /// Linux doesn't know what URLProtocol is and on tvOS/watchOS it somehow works differently and isn't hit.
         func testDirectoryStorageStress2() {
             // register our network blocker
-            guard URLProtocol.registerClass(BlockNetworkCalls.self) else { XCTFail()
+            guard URLProtocol.registerClass(BlockNetworkCalls.self) else {
+                XCTFail("Failed to register BlockNetworkCalls as a URLProtocol")
                 return
             }
 
@@ -61,7 +62,7 @@
 
             let lock = NSLock()
             var eventsWritten = 0
-            let writeBlock: (Int) -> Void = { queueNum in
+            let writeBlock: (Int) -> Void = { _ in
                 analytics.track(name: "dummy event")
                 lock.lock()
                 eventsWritten += 1
@@ -107,7 +108,8 @@
 
         func testDirectoryStorageStress() {
             // register our network blocker
-            guard URLProtocol.registerClass(BlockNetworkCalls.self) else { XCTFail()
+            guard URLProtocol.registerClass(BlockNetworkCalls.self) else {
+                XCTFail("Failed to register BlockNetworkCalls as a URLProtocol")
                 return
             }
 
@@ -248,7 +250,8 @@
 
         func testMemoryStorageStress() {
             // register our network blocker
-            guard URLProtocol.registerClass(BlockNetworkCalls.self) else { XCTFail()
+            guard URLProtocol.registerClass(BlockNetworkCalls.self) else {
+                XCTFail("Failed to register BlockNetworkCalls as a URLProtocol")
                 return
             }
 

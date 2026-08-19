@@ -46,8 +46,7 @@ class JSONTests: XCTestCase {
             let json = try encoder.encode(userInfo)
             XCTAssertNotNil(json)
         } catch {
-            print(error)
-            XCTFail()
+            XCTFail("Unexpected error: \(error)")
         }
     }
 
@@ -70,8 +69,7 @@ class JSONTests: XCTestCase {
             let newTest = try JSONDecoder.default.decode(TestStruct.self, from: json)
             XCTAssertEqual(newTest.myDate.toString(), "\"\(expectedDateString)\"")
         } catch {
-            print(error)
-            XCTFail()
+            XCTFail("Unexpected error: \(error)")
         }
 
         let dummyProps = ["myDate": expectedDate] // <- conforms to Codable
@@ -86,7 +84,7 @@ class JSONTests: XCTestCase {
         let value = json["myDate"]
 
         guard case .string(let actualDateString) = value else {
-            XCTFail()
+            XCTFail("Expected \"myDate\" to decode as JSON.string, got \(String(describing: value))")
             return
         }
 
@@ -130,8 +128,7 @@ class JSONTests: XCTestCase {
             let json = try encoder.encode(object)
             XCTAssertNotNil(json)
         } catch {
-            print(error)
-            XCTFail()
+            XCTFail("Unexpected error: \(error)")
         }
     }
 
@@ -253,7 +250,7 @@ class JSONTests: XCTestCase {
 
         let json = try JSON(dict)
 
-        let output = try json.mapTransform(keys, valueTransform: { key, value in
+        let output = try json.mapTransform(keys, valueTransform: { _, value in
             var newValue = value
             if let v = newValue as? Int {
                 if v == 1 {
@@ -287,7 +284,7 @@ class JSONTests: XCTestCase {
         let dict = ["hello": true, "goodbye": false]
         let notCodable = NotCodable()
 
-        var json: JSON? = nil
+        var json: JSON?
 
         // does a simple add to array work?
         json = try? JSON(array)
@@ -299,7 +296,7 @@ class JSONTests: XCTestCase {
             XCTAssertTrue(v?.intValue == 5)
             XCTAssertThrowsError(try json?.add(value: notCodable))
         } catch {
-            XCTFail()
+            XCTFail("Unexpected error adding a value: \(error)")
         }
 
         // does a simple add key/value work?
@@ -312,7 +309,7 @@ class JSONTests: XCTestCase {
             XCTAssertTrue(v?.boolValue == true)
             XCTAssertThrowsError(try json?.add(value: notCodable, forKey: "issaFail"))
         } catch {
-            XCTFail()
+            XCTFail("Unexpected error adding a keyed value: \(error)")
         }
 
         // try to remove a key
@@ -323,7 +320,7 @@ class JSONTests: XCTestCase {
             XCTAssertNotNil(json)
             XCTAssertNil(json?["goodbye"])
         } catch {
-            XCTFail()
+            XCTFail("Unexpected error removing a key: \(error)")
         }
 
         // Merchant: if we add/remove, do we not bleed?!
@@ -351,8 +348,7 @@ class JSONTests: XCTestCase {
             let o = try JSON(nan)
             XCTAssertNotNil(o)
         } catch {
-            print(error)
-            XCTFail()
+            XCTFail("Unexpected error: \(error)")
         }
 
         let test = TestStruct(
@@ -369,8 +365,7 @@ class JSONTests: XCTestCase {
             XCTAssertNotNil(t)
             XCTAssertTrue(t?.nando == 0)
         } catch {
-            print(error)
-            XCTFail()
+            XCTFail("Unexpected error: \(error)")
         }
     }
 
@@ -388,8 +383,7 @@ class JSONTests: XCTestCase {
             let o = try JSON(nan)
             XCTAssertNotNil(o)
         } catch {
-            print(error)
-            XCTFail()
+            XCTFail("Unexpected error: \(error)")
         }
 
         let test = TestStruct(
@@ -406,8 +400,7 @@ class JSONTests: XCTestCase {
             XCTAssertNotNil(t)
             XCTAssertNil(t?.nando)
         } catch {
-            print(error)
-            XCTFail()
+            XCTFail("Unexpected error: \(error)")
         }
     }
 
@@ -459,10 +452,8 @@ class JSONTests: XCTestCase {
 
             let uuid: String? = json[keyPath: "uuid"]
             XCTAssertEqual(uuid?.count, 36)
-
         } catch {
-            print(error)
-            XCTFail()
+            XCTFail("Unexpected error: \(error)")
         }
     }
 }

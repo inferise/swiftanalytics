@@ -22,8 +22,8 @@ public struct RateLimitConfig: Codable {
         self.maxRetryInterval = try container.decodeIfPresent(Int.self, forKey: .maxRetryInterval) ?? 300
     }
 
-    public func validated() -> RateLimitConfig {
-        RateLimitConfig(
+    public func validated() -> Self {
+        Self(
             enabled: self.enabled,
             maxRetryCount: max(0, min(self.maxRetryCount, 1000)),
             maxRetryInterval: max(1, min(self.maxRetryInterval, 3600))
@@ -126,12 +126,12 @@ public struct BackoffConfig: Codable {
         try container.encode(stringKeyed, forKey: .statusCodeOverrides)
     }
 
-    public func validated() -> BackoffConfig {
+    public func validated() -> Self {
         let validOverrides = self.statusCodeOverrides.filter { code, _ in
             code >= 100 && code <= 599
         }
 
-        return BackoffConfig(
+        return Self(
             enabled: self.enabled,
             maxRetryCount: max(0, min(self.maxRetryCount, 1000)),
             baseBackoffInterval: max(0.1, min(self.baseBackoffInterval, 60.0)),

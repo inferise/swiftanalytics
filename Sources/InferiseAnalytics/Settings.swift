@@ -8,13 +8,13 @@
 import Foundation
 
 public struct Settings: Codable {
-    public var integrations: JSON? = nil
-    public var plan: JSON? = nil
-    public var edgeFunction: JSON? = nil
-    public var middlewareSettings: JSON? = nil
-    public var autoInstrumentation: JSON? = nil
-    public var metrics: JSON? = nil
-    public var consentSettings: JSON? = nil
+    public var integrations: JSON?
+    public var plan: JSON?
+    public var edgeFunction: JSON?
+    public var middlewareSettings: JSON?
+    public var autoInstrumentation: JSON?
+    public var metrics: JSON?
+    public var consentSettings: JSON?
 
     public init(writeKey: String, apiHost: String) {
         self.integrations = try! JSON([
@@ -45,14 +45,14 @@ public struct Settings: Codable {
         self.consentSettings = try? values.decode(JSON.self, forKey: CodingKeys.consentSettings)
     }
 
-    static public func load(from url: URL?) -> Settings? {
+    static public func load(from url: URL?) -> Self? {
         guard let url else { return nil }
         guard let data = try? Data(contentsOf: url) else { return nil }
-        let settings = try? JSONDecoder.default.decode(Settings.self, from: data)
+        let settings = try? JSONDecoder.default.decode(Self.self, from: data)
         return settings
     }
 
-    static public func load(resource: String, bundle: Bundle = Bundle.main) -> Settings? {
+    static public func load(resource: String, bundle: Bundle = Bundle.main) -> Self? {
         let url = bundle.url(forResource: resource, withExtension: nil)
         return self.load(from: url)
     }
@@ -80,7 +80,7 @@ public struct Settings: Codable {
     }
 
     public func integrationSettings<T: Decodable>(forKey key: String) -> T? {
-        var result: T? = nil
+        var result: T?
         guard let settings = integrations?.dictionaryValue else { return nil }
         if let dict = settings[key], let jsonData = try? JSONSerialization.data(withJSONObject: dict) {
             result = try? JSONDecoder.default.decode(T.self, from: jsonData)

@@ -22,12 +22,14 @@ struct System: State {
         let settings: Settings
 
         func reduce(state: System) -> System {
-            let result = System(configuration: state.configuration,
-                                settings: self.settings,
-                                running: state.running,
-                                enabled: state.enabled,
-                                initializedPlugins: state.initializedPlugins,
-                                waitingPlugins: state.waitingPlugins)
+            let result = System(
+                configuration: state.configuration,
+                settings: self.settings,
+                running: state.running,
+                enabled: state.enabled,
+                initializedPlugins: state.initializedPlugins,
+                waitingPlugins: state.waitingPlugins
+            )
             return result
         }
     }
@@ -42,23 +44,27 @@ struct System: State {
                 desiredRunning = false
             }
 
-            return System(configuration: state.configuration,
-                          settings: state.settings,
-                          running: desiredRunning,
-                          enabled: state.enabled,
-                          initializedPlugins: state.initializedPlugins,
-                          waitingPlugins: state.waitingPlugins)
+            return System(
+                configuration: state.configuration,
+                settings: state.settings,
+                running: desiredRunning,
+                enabled: state.enabled,
+                initializedPlugins: state.initializedPlugins,
+                waitingPlugins: state.waitingPlugins
+            )
         }
     }
 
     struct ForceRunningAction: Action {
         func reduce(state: System) -> System {
-            System(configuration: state.configuration,
-                   settings: state.settings,
-                   running: true,
-                   enabled: state.enabled,
-                   initializedPlugins: state.initializedPlugins,
-                   waitingPlugins: state.waitingPlugins)
+            System(
+                configuration: state.configuration,
+                settings: state.settings,
+                running: true,
+                enabled: state.enabled,
+                initializedPlugins: state.initializedPlugins,
+                waitingPlugins: state.waitingPlugins
+            )
         }
     }
 
@@ -66,12 +72,14 @@ struct System: State {
         let enabled: Bool
 
         func reduce(state: System) -> System {
-            System(configuration: state.configuration,
-                   settings: state.settings,
-                   running: state.running,
-                   enabled: self.enabled,
-                   initializedPlugins: state.initializedPlugins,
-                   waitingPlugins: state.waitingPlugins)
+            System(
+                configuration: state.configuration,
+                settings: state.settings,
+                running: state.running,
+                enabled: self.enabled,
+                initializedPlugins: state.initializedPlugins,
+                waitingPlugins: state.waitingPlugins
+            )
         }
     }
 
@@ -79,12 +87,14 @@ struct System: State {
         let configuration: Configuration
 
         func reduce(state: System) -> System {
-            System(configuration: self.configuration,
-                   settings: state.settings,
-                   running: state.running,
-                   enabled: state.enabled,
-                   initializedPlugins: state.initializedPlugins,
-                   waitingPlugins: state.waitingPlugins)
+            System(
+                configuration: self.configuration,
+                settings: state.settings,
+                running: state.running,
+                enabled: state.enabled,
+                initializedPlugins: state.initializedPlugins,
+                waitingPlugins: state.waitingPlugins
+            )
         }
     }
 
@@ -97,12 +107,14 @@ struct System: State {
                 integrations[self.key] = true
                 settings?.integrations = try? JSON(integrations)
             }
-            return System(configuration: state.configuration,
-                          settings: settings,
-                          running: state.running,
-                          enabled: state.enabled,
-                          initializedPlugins: state.initializedPlugins,
-                          waitingPlugins: state.waitingPlugins)
+            return System(
+                configuration: state.configuration,
+                settings: settings,
+                running: state.running,
+                enabled: state.enabled,
+                initializedPlugins: state.initializedPlugins,
+                waitingPlugins: state.waitingPlugins
+            )
         }
     }
 
@@ -116,12 +128,14 @@ struct System: State {
             }) {
                 initializedPlugins.append(self.plugin)
             }
-            return System(configuration: state.configuration,
-                          settings: state.settings,
-                          running: state.running,
-                          enabled: state.enabled,
-                          initializedPlugins: initializedPlugins,
-                          waitingPlugins: state.waitingPlugins)
+            return System(
+                configuration: state.configuration,
+                settings: state.settings,
+                running: state.running,
+                enabled: state.enabled,
+                initializedPlugins: initializedPlugins,
+                waitingPlugins: state.waitingPlugins
+            )
         }
     }
 
@@ -135,12 +149,14 @@ struct System: State {
             }) {
                 waitingPlugins.append(self.plugin)
             }
-            return System(configuration: state.configuration,
-                          settings: state.settings,
-                          running: state.running,
-                          enabled: state.enabled,
-                          initializedPlugins: state.initializedPlugins,
-                          waitingPlugins: waitingPlugins)
+            return System(
+                configuration: state.configuration,
+                settings: state.settings,
+                running: state.running,
+                enabled: state.enabled,
+                initializedPlugins: state.initializedPlugins,
+                waitingPlugins: waitingPlugins
+            )
         }
     }
 
@@ -153,12 +169,14 @@ struct System: State {
                 self.plugin === p
             }
 
-            return System(configuration: state.configuration,
-                          settings: state.settings,
-                          running: state.running,
-                          enabled: state.enabled,
-                          initializedPlugins: state.initializedPlugins,
-                          waitingPlugins: waitingPlugins)
+            return System(
+                configuration: state.configuration,
+                settings: state.settings,
+                running: state.running,
+                enabled: state.enabled,
+                initializedPlugins: state.initializedPlugins,
+                waitingPlugins: waitingPlugins
+            )
         }
     }
 }

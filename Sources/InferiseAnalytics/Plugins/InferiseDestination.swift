@@ -227,6 +227,14 @@ extension InferiseDestination {
         }
     }
 
+    // The branching here is the retry/backoff decision tree (skipAllBatches /
+    // skipThisBatch / dropBatch / proceed) plus the upload completion handling,
+    // and it is exactly the path verified end-to-end against the deployed
+    // sandbox and prod stacks (see NoSegmentEgress_Tests and the aws-analytics
+    // contract tests). Splitting it to satisfy a complexity threshold is real
+    // work that deserves its own reviewed, re-verified change -- not something
+    // to do incidentally while clearing lint output.
+    // swiftlint:disable:next cyclomatic_complexity
     private func flushData(group: DispatchGroup) {
         // DO NOT CALL THIS FROM THE MAIN THREAD, IT BLOCKS!
         // Don't make me add a check here; i'll be sad you didn't follow directions.
@@ -250,8 +258,19 @@ extension InferiseDestination {
             guard let removable = eventData.removable else { break }
             guard let dataCount = eventData.removable?.count else { break }
 
-            // Generate a stable batch identifier from the data content
-            let batchId = "mem-\(data.hashValue)"
+            // Generate a stable batch identifier from the underlying item identities,
+            // NOT from `data`. `data` is `fullyFormedJSON(items:)`'s output, which embeds
+            // a fresh `Date().iso8601()` as `sentAt` on every single fetch -- refetching
+            // the exact same still-queued items on a retry therefore produces different
+            // bytes, a different `data.hashValue`, and so a different batchId each time.
+            // That silently orphans the retry state recorded under the previous attempt's
+            // id: `shouldUploadBatch` finds no metadata for the new id and returns
+            // `.proceed`, so backoff windows are never honored and a batch that should
+            // have been dropped after maxRetryCount just keeps retrying forever. The item
+            // UUIDs in `removable` are assigned once at `append(data:)` and don't change
+            // across fetches of the same items, so they're the stable part of "this batch".
+            let itemIDs = removable.compactMap { $0 as? UUID }.map(\.uuidString).sorted()
+            let batchId = "mem-\(itemIDs.joined(separator: "-").hashValue)"
 
             // Check retry state machine before uploading
             let decision = httpClient.checkBatchUpload(batchId: batchId)

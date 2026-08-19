@@ -79,8 +79,10 @@ import XCTest
             NotificationCenter.default.post(name: UIApplication.willEnterForegroundNotification, object: nil)
 
             let trackEvent: TrackEvent? = outputReader.lastEvent as? TrackEvent
-            XCTAssertEqual(trackEvent?.event, "Application Foregrounded",
-                           "Application Foregrounded should fire after coming back from background")
+            XCTAssertEqual(
+                trackEvent?.event, "Application Foregrounded",
+                "Application Foregrounded should fire after coming back from background"
+            )
         }
 
         func testTransientInterruptionDoesNotFireForegrounded() {
@@ -117,8 +119,10 @@ import XCTest
             NotificationCenter.default.post(name: UIApplication.willEnterForegroundNotification, object: nil)
 
             let trackEvent: TrackEvent? = outputReader.lastEvent as? TrackEvent
-            XCTAssertNotEqual(trackEvent?.event, "Application Foregrounded",
-                              "Application Foregrounded should not fire without a prior background event")
+            XCTAssertNotEqual(
+                trackEvent?.event, "Application Foregrounded",
+                "Application Foregrounded should not fire without a prior background event"
+            )
         }
 
         func testMultipleBackgroundForegroundCycles() {
@@ -134,16 +138,20 @@ import XCTest
             NotificationCenter.default.post(name: UIApplication.willEnterForegroundNotification, object: nil)
 
             var trackEvent: TrackEvent? = outputReader.lastEvent as? TrackEvent
-            XCTAssertEqual(trackEvent?.event, "Application Foregrounded",
-                           "First foreground cycle should fire Application Foregrounded")
+            XCTAssertEqual(
+                trackEvent?.event, "Application Foregrounded",
+                "First foreground cycle should fire Application Foregrounded"
+            )
 
             // Cycle 2: Background → Foreground
             NotificationCenter.default.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
             NotificationCenter.default.post(name: UIApplication.willEnterForegroundNotification, object: nil)
 
             trackEvent = outputReader.lastEvent as? TrackEvent
-            XCTAssertEqual(trackEvent?.event, "Application Foregrounded",
-                           "Second foreground cycle should also fire Application Foregrounded")
+            XCTAssertEqual(
+                trackEvent?.event, "Application Foregrounded",
+                "Second foreground cycle should also fire Application Foregrounded"
+            )
         }
 
         func testBackgroundAlwaysFires() {
@@ -158,8 +166,10 @@ import XCTest
             NotificationCenter.default.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
 
             let trackEvent: TrackEvent? = outputReader.lastEvent as? TrackEvent
-            XCTAssertEqual(trackEvent?.event, "Application Backgrounded",
-                           "Application Backgrounded should always fire when app enters background")
+            XCTAssertEqual(
+                trackEvent?.event, "Application Backgrounded",
+                "Application Backgrounded should always fire when app enters background"
+            )
         }
 
         func testComplexLifecycleSequence() {
@@ -187,8 +197,10 @@ import XCTest
 
             // Last event should still be "Application Foregrounded" from step 2
             trackEvent = outputReader.lastEvent as? TrackEvent
-            XCTAssertEqual(trackEvent?.event, "Application Foregrounded",
-                           "Transient interruption should not create new events")
+            XCTAssertEqual(
+                trackEvent?.event, "Application Foregrounded",
+                "Transient interruption should not create new events"
+            )
 
             // 4. Background again
             NotificationCenter.default.post(name: UIApplication.didEnterBackgroundNotification, object: nil)

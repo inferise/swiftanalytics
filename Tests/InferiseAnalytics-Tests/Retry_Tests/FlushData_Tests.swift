@@ -61,9 +61,9 @@
             // Settings requests — always succeed
             DispatchQueue.global().async {
                 let resp = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)
-                let settings = """
+                let settings = Data("""
                 {"integrations":{"Inferise":{"apiKey":"test"}},"plan":{"track":{"__default":{"enabled":true}}}}
-                """.data(using: .utf8)
+                """.utf8)
                 completionHandler(settings, resp, nil)
             }
             return task
@@ -98,10 +98,6 @@
     // MARK: - Tests
 
     class FlushData_Tests: XCTestCase {
-        override func setUp() {
-            super.setUp()
-        }
-
         // MARK: CDN httpConfig parsing (InferiseDestination lines 83-96)
 
         func testUpdateSettingsWithHttpConfigRebuildsHTTPClient() throws {
@@ -125,9 +121,10 @@
                 },
                 "plan": { "track": { "__default": { "enabled": true } } }
             }
-            """.data(using: .utf8)!
+            """
+            let settingsJSONData = Data(settingsJSON.utf8)
 
-            let settings = try JSONDecoder.default.decode(Settings.self, from: settingsJSON)
+            let settings = try JSONDecoder.default.decode(Settings.self, from: settingsJSONData)
             destination.update(settings: settings, type: .initial)
 
             // HTTPClient should have been rebuilt

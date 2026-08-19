@@ -83,9 +83,9 @@ import Foundation
             var systemInfo = utsname()
             uname(&systemInfo)
             let machineMirror = Mirror(reflecting: systemInfo.machine)
-            let identifier = machineMirror.children.reduce("") { identifier, element in
-                guard let value = element.value as? Int8, value != 0 else { return identifier }
-                return identifier + String(UnicodeScalar(UInt8(value)))
+            let identifier = machineMirror.children.reduce(into: "") { identifier, element in
+                guard let value = element.value as? Int8, value != 0 else { return }
+                identifier += String(UnicodeScalar(UInt8(value)))
             }
             return identifier
         }
@@ -211,10 +211,12 @@ import Foundation
         }
 
         override var systemVersion: String {
-            String(format: "%ld.%ld.%ld",
-                   self.device.operatingSystemVersion.majorVersion,
-                   self.device.operatingSystemVersion.minorVersion,
-                   self.device.operatingSystemVersion.patchVersion)
+            String(
+                format: "%ld.%ld.%ld",
+                self.device.operatingSystemVersion.majorVersion,
+                self.device.operatingSystemVersion.minorVersion,
+                self.device.operatingSystemVersion.patchVersion
+            )
         }
 
         override var screenSize: ScreenSize {
@@ -238,9 +240,9 @@ import Foundation
             var systemInfo = utsname()
             uname(&systemInfo)
             let machineMirror = Mirror(reflecting: systemInfo.machine)
-            let identifier = machineMirror.children.reduce("") { identifier, element in
-                guard let value = element.value as? Int8, value != 0 else { return identifier }
-                return identifier + String(UnicodeScalar(UInt8(value)))
+            let identifier = machineMirror.children.reduce(into: "") { identifier, element in
+                guard let value = element.value as? Int8, value != 0 else { return }
+                identifier += String(UnicodeScalar(UInt8(value)))
             }
             return identifier
         }

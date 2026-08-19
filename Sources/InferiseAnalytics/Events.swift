@@ -146,7 +146,7 @@ extension Analytics {
     ///     For example, an event with the name 'Purchased a Shirt' might have properties
     ///     like revenue or size.
     public func track(name: String, properties: [String: Any]? = nil) {
-        var props: JSON? = nil
+        var props: JSON?
         if let properties {
             do {
                 props = try JSON(properties)
@@ -262,7 +262,7 @@ extension Analytics {
     ///     like revenue or size.
     ///   - enrichments: Enrichments to be applied to this specific event only, or `nil` for none.
     public func track(name: String, properties: [String: Any]?, enrichments: [EnrichmentClosure]?) {
-        var props: JSON? = nil
+        var props: JSON?
         if let properties {
             do {
                 props = try JSON(properties)

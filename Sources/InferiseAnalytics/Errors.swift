@@ -30,8 +30,8 @@ public indirect enum AnalyticsError: Error {
 
     case enrichmentError(String)
 
-    case settingsFail(AnalyticsError)
-    case batchUploadFail(AnalyticsError)
+    case settingsFail(Self)
+    case batchUploadFail(Self)
 }
 
 extension Analytics {

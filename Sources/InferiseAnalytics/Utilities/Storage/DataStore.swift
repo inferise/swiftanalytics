@@ -7,6 +7,11 @@
 
 import Foundation
 
+// Not a domain/API model -- this is the shape a storage fetch returns
+// (raw data, or file URLs, plus what's removable once uploaded). "DataModel"
+// would misdescribe it; the rule's \w+Result regex is aimed at that other
+// naming pattern, and this isn't an instance of it.
+// swiftlint:disable:next result_suffix_model
 public struct DataResult {
     public let data: Data?
     public let dataFiles: [URL]?

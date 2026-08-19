@@ -109,9 +109,9 @@ class HttpConfig_Tests: XCTestCase {
     // MARK: - Codable tests
 
     func testRateLimitConfigDecodesFromPartialJSON() throws {
-        let json = """
+        let json = Data("""
         { "enabled": true, "maxRetryCount": 5 }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let config = try JSONDecoder().decode(RateLimitConfig.self, from: json)
         XCTAssertTrue(config.enabled)
@@ -120,7 +120,7 @@ class HttpConfig_Tests: XCTestCase {
     }
 
     func testRateLimitConfigDecodesFromEmptyJSON() throws {
-        let json = "{}".data(using: .utf8)!
+        let json = Data("{}".utf8)
         let config = try JSONDecoder().decode(RateLimitConfig.self, from: json)
         XCTAssertFalse(config.enabled)
         XCTAssertEqual(config.maxRetryCount, 100)
@@ -128,14 +128,14 @@ class HttpConfig_Tests: XCTestCase {
     }
 
     func testBackoffConfigDecodesFromPartialJSON() throws {
-        let json = """
+        let json = Data("""
         {
             "enabled": true,
             "maxRetryCount": 3,
             "baseBackoffInterval": 1.0,
             "statusCodeOverrides": { "408": "retry", "501": "drop" }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let config = try JSONDecoder().decode(BackoffConfig.self, from: json)
         XCTAssertTrue(config.enabled)
@@ -147,7 +147,7 @@ class HttpConfig_Tests: XCTestCase {
     }
 
     func testBackoffConfigDecodesFromEmptyJSON() throws {
-        let json = "{}".data(using: .utf8)!
+        let json = Data("{}".utf8)
         let config = try JSONDecoder().decode(BackoffConfig.self, from: json)
         XCTAssertFalse(config.enabled)
         XCTAssertEqual(config.maxRetryCount, 100)
@@ -185,12 +185,12 @@ class HttpConfig_Tests: XCTestCase {
     }
 
     func testHttpConfigDecodesFromPartialJSON() throws {
-        let json = """
+        let json = Data("""
         {
             "rateLimitConfig": { "enabled": true },
             "backoffConfig": { "enabled": true, "maxRetryCount": 5 }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let config = try JSONDecoder().decode(HttpConfig.self, from: json)
         XCTAssertTrue(config.rateLimitConfig.enabled)
@@ -199,7 +199,7 @@ class HttpConfig_Tests: XCTestCase {
     }
 
     func testHttpConfigDecodesFromEmptyJSON() throws {
-        let json = "{}".data(using: .utf8)!
+        let json = Data("{}".utf8)
         let config = try JSONDecoder().decode(HttpConfig.self, from: json)
         XCTAssertFalse(config.rateLimitConfig.enabled)
         XCTAssertFalse(config.backoffConfig.enabled)

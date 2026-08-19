@@ -10,8 +10,14 @@ class RetryAfterGenericTests: XCTestCase {
         super.setUp()
         self.config = HttpConfig(
             rateLimitConfig: RateLimitConfig(enabled: true, maxRetryCount: 100, maxRetryInterval: 300),
-            backoffConfig: BackoffConfig(enabled: true, maxRetryCount: 100, baseBackoffInterval: 0.5,
-                                         maxBackoffInterval: 300, maxTotalBackoffDuration: 43200, jitterPercent: 1)
+            backoffConfig: BackoffConfig(
+                enabled: true,
+                maxRetryCount: 100,
+                baseBackoffInterval: 0.5,
+                maxBackoffInterval: 300,
+                maxTotalBackoffDuration: 43200,
+                jitterPercent: 1
+            )
         )
         self.timeProvider = FakeTimeProvider(currentTime: 1000)
         self.stateMachine = RetryStateMachine(config: self.config, timeProvider: self.timeProvider)
@@ -112,8 +118,14 @@ class RetryAfterGenericTests: XCTestCase {
     func test_globalRetryCountCapDropsBatchAfterMaxRetries() {
         let cappedConfig = HttpConfig(
             rateLimitConfig: RateLimitConfig(enabled: true, maxRetryCount: 3, maxRetryInterval: 300),
-            backoffConfig: BackoffConfig(enabled: true, maxRetryCount: 100, baseBackoffInterval: 0.5,
-                                         maxBackoffInterval: 300, maxTotalBackoffDuration: 43200, jitterPercent: 1)
+            backoffConfig: BackoffConfig(
+                enabled: true,
+                maxRetryCount: 100,
+                baseBackoffInterval: 0.5,
+                maxBackoffInterval: 300,
+                maxTotalBackoffDuration: 43200,
+                jitterPercent: 1
+            )
         )
         let machine = RetryStateMachine(config: cappedConfig, timeProvider: timeProvider)
         var state = RetryState()

@@ -264,7 +264,7 @@ extension DestinationPlugin {
         // This will process plugins (think destination middleware) that are tied
         // to this destination.
 
-        var result: E? = nil
+        var result: E?
 
         if self.isDestinationEnabled(event: incomingEvent) {
             // apply .before and .enrichment types first ...
@@ -273,7 +273,7 @@ extension DestinationPlugin {
 
             // now we execute any overrides we may have made.  basically, the idea is to take an
             // incoming event, like identify, and map it to whatever is appropriate for this destination.
-            var destinationResult: E? = nil
+            var destinationResult: E?
             switch enrichmentResult {
             case let e as IdentifyEvent:
                 destinationResult = identify(event: e) as? E

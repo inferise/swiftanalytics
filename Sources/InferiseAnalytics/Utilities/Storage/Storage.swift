@@ -36,7 +36,7 @@ class Storage: Subscriber {
                     storageLocation: storageURL,
                     baseFilename: "inferise-events",
                     maxFileSize: Self.MAXFILESIZE,
-                    indexKey: Storage.Constants.events.rawValue
+                    indexKey: Self.Constants.events.rawValue
                 )
             )
             self.dataStore = TransientDB(store: store, asyncAppend: asyncAppend)
@@ -102,7 +102,7 @@ class Storage: Subscriber {
     }
 
     func read<T: Decodable>(_ key: Storage.Constants) -> T? {
-        var result: T? = nil
+        var result: T?
         switch key {
         case .events:
             // do nothing
@@ -147,14 +147,7 @@ class Storage: Subscriber {
             switch value {
             // NSNull is not valid for UserDefaults
             // case is NSNull:
-            //    fallthrough
-            case is Decimal:
-                fallthrough
-            case is NSNumber:
-                fallthrough
-            case is Bool:
-                fallthrough
-            case is String:
+            case is Decimal, is NSNumber, is Bool, is String:
                 result = true
             default:
                 break

@@ -372,7 +372,7 @@ extension Analytics {
     /// Retrieve the version of this library in use.
     /// - Returns: A string representing the version in "BREAKING.FEATURE.FIX" format.
     public func version() -> String {
-        Analytics.version()
+        Self.version()
     }
 
     /// Retrieve the version of this library in use.
@@ -494,7 +494,7 @@ extension Analytics {
             }
         }
 
-        var jsonProperties: JSON? = nil
+        var jsonProperties: JSON?
         if let json = try? JSON(options) {
             do {
                 jsonProperties = try json.add(value: url.absoluteString, forKey: "url")
@@ -565,7 +565,7 @@ extension OperatingMode {
             // in synchronous mode, always use our own queue to
             // prevent deadlocks.
             let workItem = DispatchWorkItem(block: task)
-            OperatingMode.defaultQueue.asyncAndWait(execute: workItem)
+            Self.defaultQueue.asyncAndWait(execute: workItem)
         }
     }
 }

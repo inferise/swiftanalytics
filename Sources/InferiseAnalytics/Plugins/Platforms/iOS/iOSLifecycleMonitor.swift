@@ -111,7 +111,7 @@
         func didFinishLaunching(notification: NSNotification) {
             self.analytics?.apply { ext in
                 if let validExt = ext as? iOSLifecycle {
-                    let options = notification.userInfo as? [UIApplication.LaunchOptionsKey: Any] ?? nil
+                    let options = notification.userInfo as? [UIApplication.LaunchOptionsKey: Any]
                     validExt.application(self.application, didFinishLaunchingWithOptions: options)
                 }
             }
@@ -164,8 +164,10 @@
             if !isAppExtension, let application = UIApplication.safeShared {
                 self.analytics?.apply { ext in
                     if let validExt = ext as? iOSLifecycle {
-                        validExt.applicationBackgroundRefreshDidChange(application: application,
-                                                                       refreshStatus: application.backgroundRefreshStatus)
+                        validExt.applicationBackgroundRefreshDidChange(
+                            application: application,
+                            refreshStatus: application.backgroundRefreshStatus
+                        )
                     }
                 }
             }
@@ -228,7 +230,7 @@
                 // be generated even though we're guarding against app extensions.
                 // there's no preprocessor macro or @available macro to help us here unfortunately
                 // so this is the best i could do.
-                return UIApplication.value(forKeyPath: "sharedApplication") as? UIApplication
+                return value(forKeyPath: "sharedApplication") as? UIApplication
             }
             // if we ARE an app extension, send back nil since we have no way to get the
             // application instance.

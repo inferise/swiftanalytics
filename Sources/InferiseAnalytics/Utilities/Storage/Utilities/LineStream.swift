@@ -8,7 +8,7 @@
 import Foundation
 
 enum LineStreamConstants {
-    static let delimiter = "\n".data(using: .utf8)!
+    static let delimiter = Data("\n".utf8)
 }
 
 class LineStreamReader {

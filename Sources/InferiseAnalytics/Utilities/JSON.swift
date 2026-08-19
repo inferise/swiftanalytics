@@ -52,8 +52,8 @@ public enum JSON: Equatable {
     case bool(Bool)
     case number(Decimal)
     case string(String)
-    case array([JSON])
-    case object([String: JSON])
+    case array([Self])
+    case object([String: Self])
 
     static var jsonNonConformingNumberStrategy: JSONSafeEncoder.NonConformingFloatEncodingStrategy = .zero
 
@@ -64,7 +64,7 @@ public enum JSON: Equatable {
     }
 
     public init(_ object: [String: Any]) throws {
-        self = try .object(object.mapValues(JSON.init))
+        self = try .object(object.mapValues(Self.init))
     }
 
     public init?(nilOrObject object: [String: Any]?) throws {
@@ -105,12 +105,12 @@ public enum JSON: Equatable {
         case let bool as Bool:
             self = .bool(bool)
         case let aSet as Set<AnyHashable>:
-            self = try .array(aSet.map(JSON.init))
-        case let array as Array<Any>:
-            self = try .array(array.map(JSON.init))
+            self = try .array(aSet.map(Self.init))
+        case let array as [Any]:
+            self = try .array(array.map(Self.init))
         case let object as [String: Any]:
-            self = try .object(object.mapValues(JSON.init))
-        case let json as JSON:
+            self = try .object(object.mapValues(Self.init))
+        case let json as Self:
             self = json
         case let codable as Codable:
             self = try Self(with: codable)
@@ -195,7 +195,7 @@ extension Encodable {
 
 extension JSON {
     private func rawValue() -> Any {
-        var result: Any? = nil
+        var result: Any?
         switch self {
         case .null:
             result = NSNull()
@@ -220,7 +220,7 @@ extension JSON {
     }
 
     public func codableValue<T: Decodable>() -> T? {
-        var result: T? = nil
+        var result: T?
         if let dict = dictionaryValue, let jsonData = try? JSONSerialization.data(withJSONObject: dict) {
             do {
                 result = try JSONDecoder.default.decode(T.self, from: jsonData)
@@ -231,6 +231,11 @@ extension JSON {
         return result
     }
 
+    // Optional is load-bearing here: nil means "not a .bool case", distinct from a
+    // real `false` payload value. Matches the sibling accessors on this type
+    // (decimalValue: Decimal?, stringValue: String?, ...), which the rule doesn't
+    // flag only because their wrapped type isn't Bool.
+    // swiftlint:disable:next discouraged_optional_boolean
     public var boolValue: Bool? {
         switch self {
         case .bool(let value):
@@ -343,7 +348,7 @@ extension JSON {
     /// - Returns: A new JSON array with the supplied value added.
     /// - Throws: This method throws when a value is added and unable to be serialized.
     public func add(value: Any) throws -> JSON? {
-        var result: JSON? = nil
+        var result: JSON?
         switch self {
         case .array:
             var newArray = [Any]()
@@ -366,7 +371,7 @@ extension JSON {
     /// - Returns: A new JSON object with the supplied Key/Value added.
     /// - Throws: This method throws when a value is added and unable to be serialized.
     public func add(value: Any, forKey key: String) throws -> JSON? {
-        var result: JSON? = nil
+        var result: JSON?
         switch self {
         case .object:
             var newObject = [String: Any]()
@@ -388,7 +393,7 @@ extension JSON {
     /// - Returns: A new JSON object with the specified key and it's associated value removed.
     /// - Throws: This method throws when after modification, it is unable to be serialized.
     public func remove(key: String) throws -> JSON? {
-        var result: JSON? = nil
+        var result: JSON?
         switch self {
         case .object:
             var newObject = [String: Any]()
@@ -431,10 +436,10 @@ extension JSON {
     /// Directly access or set a value within the JSON object using a key path.
     public subscript<T: Codable>(keyPath keyPath: JSONKeyPath) -> T? {
         get {
-            var result: T? = nil
+            var result: T?
             switch self {
             case .object:
-                var value: Any? = nil
+                var value: Any?
                 if let dict = dictionaryValue {
                     value = dict[keyPath: keyPath]
                     if let v = value as? [String: Any] {
@@ -556,8 +561,8 @@ extension NSNumber {
 
     fileprivate func isBool() -> Bool {
         let type = self.objCType
-        if (compare(NSNumber.trueValue) == .orderedSame && type == NSNumber.trueObjCType) ||
-            (compare(NSNumber.falseValue) == .orderedSame && type == NSNumber.falseObjCType) {
+        if (compare(Self.trueValue) == .orderedSame && type == Self.trueObjCType) ||
+            (compare(Self.falseValue) == .orderedSame && type == Self.falseObjCType) {
             return true
         }
         return false

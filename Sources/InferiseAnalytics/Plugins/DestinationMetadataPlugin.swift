@@ -52,10 +52,8 @@ public class DestinationMetadataPlugin: Plugin {
 
         let destinationInfo = integrationSettings.integrationSettings(forKey: selfKey)
         let unbundledIntegrations = destinationInfo?["unbundledIntegrations"] as? [String] ?? []
-        for integration in unbundledIntegrations {
-            if !bundled.contains(integration) {
-                unbundled.insert(integration)
-            }
+        for integration in unbundledIntegrations where !bundled.contains(integration) {
+            unbundled.insert(integration)
         }
 
         modified._metadata = DestinationMetadata(bundled: Array(bundled), unbundled: Array(unbundled), bundledIds: [])

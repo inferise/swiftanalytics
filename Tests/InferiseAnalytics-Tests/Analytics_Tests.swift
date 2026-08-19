@@ -172,7 +172,7 @@ final class Analytics_Tests: XCTestCase {
         let analytics = Analytics(configuration: Configuration(writeKey: uniqueWriteKey()))
         let anonId = analytics.anonymousId
 
-        XCTAssertTrue(anonId != "")
+        XCTAssertFalse(anonId.isEmpty)
         XCTAssertTrue(anonId.count == 36) // it's a UUID y0.
         waitUntilStarted(analytics: analytics)
     }
@@ -496,7 +496,7 @@ final class Analytics_Tests: XCTestCase {
         analytics.track(name: "test")
 
         let batches = try XCTUnwrap(analytics.storage.read(.events)?.dataFiles)
-        let newBatchCount = try XCTUnwrap(batches?.count)
+        let newBatchCount = batches.count
         // 1 new temp file
         XCTAssertTrue(
             newBatchCount == currentBatchCount + 1,
@@ -947,7 +947,7 @@ final class Analytics_Tests: XCTestCase {
         func testFailedUploadResponse() throws {
             // register our network blocker (returns 400 response)
             guard URLProtocol.registerClass(FailedNetworkCalls.self) else {
-                XCTFail()
+                XCTFail("Failed to register FailedNetworkCalls as a URLProtocol")
                 return
             }
 
@@ -1001,7 +1001,7 @@ final class Analytics_Tests: XCTestCase {
         class MyAnonIdGenerator: AnonymousIdGenerator {
             var currentId: String = "blah-"
             func newAnonymousId() -> String {
-                self.currentId = self.currentId + "1"
+                self.currentId += "1"
                 return self.currentId
             }
         }
@@ -1318,7 +1318,7 @@ final class Analytics_Tests: XCTestCase {
         let expectation = XCTestExpectation(description: "Handler called on main queue")
         expectation.expectedFulfillmentCount = 2 // Initial + identify
 
-        analytics.subscribeToUserInfo { userInfo in
+        analytics.subscribeToUserInfo { _ in
             XCTAssertTrue(Thread.isMainThread, "Handler should be called on main thread")
             expectation.fulfill()
         }

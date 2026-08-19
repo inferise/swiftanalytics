@@ -28,15 +28,27 @@ public class DirectoryStore: DataStore {
         }
     }
 
-    public var hasData: Bool {
-        !self.isEmpty
+    /// Files currently in the storage directory, or empty if it cannot be read.
+    ///
+    /// Both `hasData` and `count` derive from this. `swiftlint --fix` rewrote
+    /// `hasData` to `!isEmpty` on the assumption that a type exposing `count`
+    /// also exposes `isEmpty`, which broke the build; routing both through a
+    /// collection makes the `empty_count` rule satisfiable without that trap.
+    private var files: [URL] {
+        (try? FileManager.default.contentsOfDirectory(
+            at: self.config.storageLocation,
+            includingPropertiesForKeys: nil
+        )) ?? []
     }
 
+    /// Whether any stored data is present.
+    public var hasData: Bool {
+        !self.files.isEmpty
+    }
+
+    /// Number of files currently stored.
     public var count: Int {
-        if let r = try? FileManager.default.contentsOfDirectory(at: config.storageLocation, includingPropertiesForKeys: nil) {
-            return r.count
-        }
-        return 0
+        self.files.count
     }
 
     public var transactionType: DataTransactionType {
@@ -173,7 +185,7 @@ extension DirectoryStore {
 
     func isFinalized(url: URL) -> Bool {
         guard let reader = LineStreamReader(url: url) else { return false }
-        var lastLine: String? = nil
+        var lastLine: String?
         while let line = reader.readLine() {
             if !line.isEmpty {
                 lastLine = line
@@ -197,7 +209,7 @@ extension DirectoryStore {
         let url = writer.url
 
         // do validation before we rename to prevent the file disappearing out from under us.
-        DirectoryStore.fileValidator?(url)
+        Self.fileValidator?(url)
 
         // move it to make availble for flushing ...
         let newURL = url.appendingPathExtension(Self.tempExtension)

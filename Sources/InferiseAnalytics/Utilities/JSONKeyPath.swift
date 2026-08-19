@@ -15,14 +15,13 @@ protocol KeyPathHandler {
 public struct BasicHandler: KeyPathHandler {
     func value(keyPath: JSONKeyPath, input: Any?, reference: Any?) -> Any? {
         guard let input = input as? [String: Any] else { return nil }
-        var result: Any? = nil
-        if keyPath.remaining.isEmpty {
-            result = input[keyPath.current]
+        var result: Any? = if keyPath.remaining.isEmpty {
+            input[keyPath.current]
         } else {
             if let nestedDict = input[keyPath.current] as? [String: Any] {
-                result = nestedDict[keyPath: JSONKeyPath(keyPath.remainingPath)]
+                nestedDict[keyPath: JSONKeyPath(keyPath.remainingPath)]
             } else {
-                result = nil
+                nil
             }
         }
         return result
@@ -52,12 +51,10 @@ public struct JSONKeyPath {
         self.handlers.insert(handler, at: 0)
     }
 
-    static func handlerFor(keyPath: JSONKeyPath, input: Any?) -> KeyPathHandler? {
+    static func handlerFor(keyPath: Self, input: Any?) -> KeyPathHandler? {
         guard let input = input as? [String: Any] else { return nil }
-        for item in self.handlers {
-            if item.isHandled(keyPath, forInput: input[keyPath.current]) {
-                return item
-            }
+        for item in self.handlers where item.isHandled(keyPath, forInput: input[keyPath.current]) {
+            return item
         }
         return nil
     }
@@ -88,20 +85,24 @@ extension Dictionary where Key: StringProtocol, Value: Any {
         guard let key = keyPath.current as? Key else { return }
 
         if keyPath.remaining.isEmpty {
-            if value.flattened() != nil {
-                self[key] = (value as! Value)
+            if value.flattened() != nil, let typedValue = value as? Value {
+                self[key] = typedValue
             } else {
                 self.removeValue(forKey: key)
             }
         } else {
             if var nestedDict = self[key] as? [String: Any] {
                 nestedDict[keyPath: JSONKeyPath(keyPath.remainingPath)] = value
-                self[key] = (nestedDict as! Value)
+                if let typedDict = nestedDict as? Value {
+                    self[key] = typedDict
+                }
             } else {
                 // this nested key doesn't exist but we're not at the end of the chain, need to create it
                 var nestedDict = [String: Any]()
                 nestedDict[keyPath: JSONKeyPath(keyPath.remainingPath)] = value
-                self[key] = (nestedDict as! Value)
+                if let typedDict = nestedDict as? Value {
+                    self[key] = typedDict
+                }
             }
         }
     }
@@ -151,10 +152,10 @@ struct IfHandler: KeyPathHandler {
         let then = conditional?[keyPath: "then", reference: reference]
         let elseCase = conditional?[keyPath: "else", reference: reference]
 
-        var result: Any? = nil
+        var result: Any?
 
         if isBlank {
-            if blank == nil || blank as? String == "" {
+            if blank == nil || (blank as? String)?.isEmpty == true {
                 result = then
             } else {
                 result = elseCase
@@ -185,7 +186,7 @@ struct PathHandler: KeyPathHandler {
         let current = input[keyPath.current] as? [String: Any]
         let path = (current?["@path"] as? String)?.strippedReference
 
-        var result: Any? = nil
+        var result: Any?
         if let path, let reference = reference as? [String: Any] {
             result = reference[keyPath: JSONKeyPath(path)]
         }

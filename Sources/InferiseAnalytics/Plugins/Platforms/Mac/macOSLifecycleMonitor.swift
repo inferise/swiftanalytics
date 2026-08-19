@@ -125,7 +125,7 @@
         func applicationDidFinishLaunching(notification: NSNotification) {
             self.analytics?.apply { ext in
                 if let validExt = ext as? macOSLifecycle {
-                    let options = notification.userInfo as? [String: Any] ?? nil
+                    let options = notification.userInfo as? [String: Any]
                     validExt.application(didFinishLaunchingWithOptions: options)
                 }
             }

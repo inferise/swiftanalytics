@@ -111,15 +111,15 @@ extension MemoryStore {
     func fullyFormedJSON(items: [ItemData]) -> Data? {
         guard !items.isEmpty else { return nil }
         var json = Data()
-        let start = "{ \"batch\": [".data(using: .utf8)!
-        let end = "],\"sentAt\":\"\(Date().iso8601())\",\"writeKey\":\"\(self.config.writeKey)\"}".data(using: .utf8)!
+        let start = Data("{ \"batch\": [".utf8)
+        let end = Data("],\"sentAt\":\"\(Date().iso8601())\",\"writeKey\":\"\(self.config.writeKey)\"}".utf8)
 
         json.append(start)
         for index in items.indices {
             if index == 0 {
                 json.append(items[index].data)
             } else {
-                json.append(",".data(using: .utf8)!)
+                json.append(Data(",".utf8))
                 json.append(items[index].data)
             }
         }

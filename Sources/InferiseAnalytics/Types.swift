@@ -33,7 +33,7 @@ public protocol RawEvent: Codable {
 }
 
 public struct TrackEvent: RawEvent {
-    @Noncodable public var enrichments: [EnrichmentClosure]? = nil
+    @Noncodable public var enrichments: [EnrichmentClosure]?
     public var type: String? = "track"
     public var anonymousId: String?
     public var messageId: String?
@@ -52,14 +52,14 @@ public struct TrackEvent: RawEvent {
         self.properties = properties
     }
 
-    public init(existing: TrackEvent) {
+    public init(existing: Self) {
         self.init(event: existing.event, properties: existing.properties)
         applyRawEventData(event: existing)
     }
 }
 
 public struct IdentifyEvent: RawEvent {
-    @Noncodable public var enrichments: [EnrichmentClosure]? = nil
+    @Noncodable public var enrichments: [EnrichmentClosure]?
     public var type: String? = "identify"
     public var anonymousId: String?
     public var messageId: String?
@@ -77,14 +77,14 @@ public struct IdentifyEvent: RawEvent {
         self.traits = traits
     }
 
-    public init(existing: IdentifyEvent) {
+    public init(existing: Self) {
         self.init(userId: existing.userId, traits: existing.traits)
         applyRawEventData(event: existing)
     }
 }
 
 public struct ScreenEvent: RawEvent {
-    @Noncodable public var enrichments: [EnrichmentClosure]? = nil
+    @Noncodable public var enrichments: [EnrichmentClosure]?
     public var type: String? = "screen"
     public var anonymousId: String?
     public var messageId: String?
@@ -105,14 +105,14 @@ public struct ScreenEvent: RawEvent {
         self.properties = properties
     }
 
-    public init(existing: ScreenEvent) {
+    public init(existing: Self) {
         self.init(title: existing.name, category: existing.category, properties: existing.properties)
         applyRawEventData(event: existing)
     }
 }
 
 public struct GroupEvent: RawEvent {
-    @Noncodable public var enrichments: [EnrichmentClosure]? = nil
+    @Noncodable public var enrichments: [EnrichmentClosure]?
     public var type: String? = "group"
     public var anonymousId: String?
     public var messageId: String?
@@ -131,14 +131,14 @@ public struct GroupEvent: RawEvent {
         self.traits = traits
     }
 
-    public init(existing: GroupEvent) {
+    public init(existing: Self) {
         self.init(groupId: existing.groupId, traits: existing.traits)
         applyRawEventData(event: existing)
     }
 }
 
 public struct AliasEvent: RawEvent {
-    @Noncodable public var enrichments: [EnrichmentClosure]? = nil
+    @Noncodable public var enrichments: [EnrichmentClosure]?
     public var type: String? = "alias"
     public var anonymousId: String?
     public var messageId: String?
@@ -156,7 +156,7 @@ public struct AliasEvent: RawEvent {
         self.previousId = previousId
     }
 
-    public init(existing: AliasEvent) {
+    public init(existing: Self) {
         self.init(newId: existing.userId, previousId: existing.previousId)
         applyRawEventData(event: existing)
     }
