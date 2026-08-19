@@ -109,6 +109,14 @@ tag:
 version:
 	@echo "$(VERSION)"
 
+
+# Tag, push, and publish a GitHub Release in one step. Depends on `tag` rather
+# than duplicating its logic, so the release always uses the exact same
+# version string that got tagged -- no chance of the two drifting apart.
+.PHONY: gh-release
+gh-release: tag
+	gh release create "$(VERSION)" --title "$(VERSION)" --generate-notes
+
 # ---------------------------------------------
 # Submodules
 # ---------------------------------------------

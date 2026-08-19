@@ -17,4 +17,4 @@
 /// against.
 ///
 /// BREAKING.FEATURE.FIX
-let packageVersion: String = "1.0.0"
+let packageVersion: String = "1.0.1"
