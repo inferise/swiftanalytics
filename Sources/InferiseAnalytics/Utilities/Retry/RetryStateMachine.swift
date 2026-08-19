@@ -10,7 +10,7 @@ public class RetryStateMachine {
     }
 
     private var isLegacyMode: Bool {
-        return !config.rateLimitConfig.enabled && !config.backoffConfig.enabled
+        !self.config.rateLimitConfig.enabled && !self.config.backoffConfig.enabled
     }
 
     public func handleResponse(state: RetryState, response: ResponseInfo) -> RetryState {
@@ -26,9 +26,9 @@ public class RetryStateMachine {
 
         // 429 rate limiting
         if response.statusCode == 429 {
-            if config.rateLimitConfig.enabled {
+            if self.config.rateLimitConfig.enabled {
                 let currentTime = response.currentTime
-                return handleRateLimitResponse(state: state, response: response, currentTime: currentTime)
+                return self.handleRateLimitResponse(state: state, response: response, currentTime: currentTime)
             }
             // Rate limit handling disabled: drop the batch (don't fall through to backoff)
             var newState = state
@@ -37,15 +37,15 @@ public class RetryStateMachine {
         }
 
         // Exponential backoff for retryable errors
-        let behavior = resolveStatusCodeBehavior(code: response.statusCode)
+        let behavior = self.resolveStatusCodeBehavior(code: response.statusCode)
         if behavior == .retry {
             let currentTime = response.currentTime
             // If server provided Retry-After, treat as pipeline-level rate limit regardless of status code
-            if response.retryAfterSeconds != nil && config.rateLimitConfig.enabled {
-                return handleRateLimitResponse(state: state, response: response, currentTime: currentTime)
+            if response.retryAfterSeconds != nil && self.config.rateLimitConfig.enabled {
+                return self.handleRateLimitResponse(state: state, response: response, currentTime: currentTime)
             }
-            if config.backoffConfig.enabled {
-                return handleRetryableError(state: state, response: response, currentTime: currentTime)
+            if self.config.backoffConfig.enabled {
+                return self.handleRetryableError(state: state, response: response, currentTime: currentTime)
             }
         }
 
@@ -60,11 +60,11 @@ public class RetryStateMachine {
         batchFile: String
     ) -> (UploadDecision, RetryState) {
         // Legacy mode: skip all smart retry logic
-        if isLegacyMode {
+        if self.isLegacyMode {
             return (.proceed, state)
         }
 
-        let currentTime = timeProvider.now()
+        let currentTime = self.timeProvider.now()
 
         // Check 1: Global rate limiting
         if state.isRateLimited(currentTime: currentTime) {
@@ -81,8 +81,8 @@ public class RetryStateMachine {
         }
 
         // Check 2: Global rate limit retry count
-        if config.rateLimitConfig.enabled &&
-           clearedState.globalRetryCount >= config.rateLimitConfig.maxRetryCount {
+        if self.config.rateLimitConfig.enabled &&
+            clearedState.globalRetryCount >= self.config.rateLimitConfig.maxRetryCount {
             var dropState = clearedState
             dropState.globalRetryCount = 0
             dropState.batchMetadata.removeValue(forKey: batchFile)
@@ -95,23 +95,23 @@ public class RetryStateMachine {
         }
 
         // Check retry count limit
-        if config.backoffConfig.enabled &&
-           metadata.failureCount >= config.backoffConfig.maxRetryCount {
+        if self.config.backoffConfig.enabled &&
+            metadata.failureCount >= self.config.backoffConfig.maxRetryCount {
             var dropState = clearedState
             dropState.batchMetadata.removeValue(forKey: batchFile)
             return (.dropBatch(reason: .maxRetriesExceeded), dropState)
         }
 
         // Check duration limit
-        if config.backoffConfig.enabled &&
-           metadata.exceedsMaxDuration(currentTime: currentTime, maxDuration: TimeInterval(config.backoffConfig.maxTotalBackoffDuration)) {
+        if self.config.backoffConfig.enabled &&
+            metadata.exceedsMaxDuration(currentTime: currentTime, maxDuration: TimeInterval(self.config.backoffConfig.maxTotalBackoffDuration)) {
             var dropState = clearedState
             dropState.batchMetadata.removeValue(forKey: batchFile)
             return (.dropBatch(reason: .maxDurationExceeded), dropState)
         }
 
         // Check if backoff time has passed
-        if config.backoffConfig.enabled && !metadata.shouldRetry(currentTime: currentTime) {
+        if self.config.backoffConfig.enabled && !metadata.shouldRetry(currentTime: currentTime) {
             return (.skipThisBatch, clearedState)
         }
 
@@ -125,17 +125,25 @@ public class RetryStateMachine {
 
     /// Returns true if the given status code should result in the batch being dropped (not retried).
     public func shouldDropBatch(statusCode: Int) -> Bool {
-        if isLegacyMode { return false }
+        if self.isLegacyMode {
+            return false
+        }
 
         // 429 with rate limit handling disabled: drop
-        if statusCode == 429 && !config.rateLimitConfig.enabled { return true }
+        if statusCode == 429 && !self.config.rateLimitConfig.enabled {
+            return true
+        }
 
-        let behavior = resolveStatusCodeBehavior(code: statusCode)
+        let behavior = self.resolveStatusCodeBehavior(code: statusCode)
         if behavior == .retry {
             // Rate limit config handles retryable codes that carry Retry-After — don't drop
-            if config.rateLimitConfig.enabled { return false }
+            if self.config.rateLimitConfig.enabled {
+                return false
+            }
             // Retryable error with backoff disabled and no rate-limit handling: drop
-            if !config.backoffConfig.enabled { return true }
+            if !self.config.backoffConfig.enabled {
+                return true
+            }
             return false
         }
 
@@ -150,7 +158,7 @@ public class RetryStateMachine {
         let existingMetadata = state.batchMetadata[response.batchFile]
         let newFailureCount = (existingMetadata?.failureCount ?? 0) + 1
         let firstFailureTime = existingMetadata?.firstFailureTime ?? currentTime
-        let nextRetryTime = currentTime + calculateBackoffInterval(failureCount: newFailureCount)
+        let nextRetryTime = currentTime + self.calculateBackoffInterval(failureCount: newFailureCount)
 
         let newMetadata = BatchMetadata(
             failureCount: newFailureCount,
@@ -164,7 +172,7 @@ public class RetryStateMachine {
     }
 
     private func calculateBackoffInterval(failureCount: Int) -> TimeInterval {
-        let base = config.backoffConfig.baseBackoffInterval
+        let base = self.config.backoffConfig.baseBackoffInterval
         let max = TimeInterval(config.backoffConfig.maxBackoffInterval)
 
         let exponentialBackoff = base * pow(2.0, Double(failureCount - 1))
@@ -183,11 +191,11 @@ public class RetryStateMachine {
 
         switch code {
         case 400..<500:
-            return config.backoffConfig.default4xxBehavior
+            return self.config.backoffConfig.default4xxBehavior
         case 500..<600:
-            return config.backoffConfig.default5xxBehavior
+            return self.config.backoffConfig.default5xxBehavior
         default:
-            return config.backoffConfig.unknownCodeBehavior
+            return self.config.backoffConfig.unknownCodeBehavior
         }
     }
 
@@ -196,7 +204,7 @@ public class RetryStateMachine {
         response: ResponseInfo,
         currentTime: TimeInterval
     ) -> RetryState {
-        let waitUntilTime = calculateWaitUntilTime(response.retryAfterSeconds, currentTime: currentTime)
+        let waitUntilTime = self.calculateWaitUntilTime(response.retryAfterSeconds, currentTime: currentTime)
 
         var newState = state
         newState.pipelineState = .rateLimited
@@ -206,15 +214,15 @@ public class RetryStateMachine {
     }
 
     private func calculateWaitUntilTime(_ retryAfterSeconds: Int?, currentTime: TimeInterval) -> TimeInterval {
-        let seconds = retryAfterSeconds?.coerceAtLeast(0) ?? config.rateLimitConfig.maxRetryInterval
+        let seconds = retryAfterSeconds?.coerceAtLeast(0) ?? self.config.rateLimitConfig.maxRetryInterval
         let clampedSeconds = min(seconds, config.rateLimitConfig.maxRetryInterval)
         return currentTime + TimeInterval(clampedSeconds)
     }
 }
 
-// Extension for Int to match Kotlin's coerceAtLeast
+/// Extension for Int to match Kotlin's coerceAtLeast
 extension Int {
     func coerceAtLeast(_ minValue: Int) -> Int {
-        return Swift.max(self, minValue)
+        Swift.max(self, minValue)
     }
 }

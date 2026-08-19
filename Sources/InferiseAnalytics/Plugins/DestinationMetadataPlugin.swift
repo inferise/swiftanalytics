@@ -19,17 +19,17 @@ public class DestinationMetadataPlugin: Plugin {
         guard var modified = event else {
             return event
         }
-        
+
         guard let integrationSettings = analytics?.settings() else { return event }
         guard let destinations = analytics?.timeline.plugins[.destination]?.plugins as? [DestinationPlugin] else { return event }
-        
+
         let selfKey = InferiseDestination.Constants.integrationName.rawValue
 
         // Mark all loaded and enabled destinations as bundled
         var bundled: Set<String> = []
         for plugin in destinations {
             // Skip processing for our own destination
-            if (plugin is InferiseDestination) {
+            if plugin is InferiseDestination {
                 continue
             }
             let hasSettings = integrationSettings.hasIntegrationSettings(forPlugin: plugin)
@@ -45,7 +45,7 @@ public class DestinationMetadataPlugin: Plugin {
 
         let activeIntegrations = integrationSettings.integrations?.dictionaryValue ?? [:]
         for (integration, _) in activeIntegrations {
-            if (integration != selfKey && !bundled.contains(integration)) {
+            if integration != selfKey && !bundled.contains(integration) {
                 unbundled.insert(integration)
             }
         }
@@ -53,13 +53,13 @@ public class DestinationMetadataPlugin: Plugin {
         let destinationInfo = integrationSettings.integrationSettings(forKey: selfKey)
         let unbundledIntegrations = destinationInfo?["unbundledIntegrations"] as? [String] ?? []
         for integration in unbundledIntegrations {
-            if (!bundled.contains(integration)) {
+            if !bundled.contains(integration) {
                 unbundled.insert(integration)
             }
         }
-        
+
         modified._metadata = DestinationMetadata(bundled: Array(bundled), unbundled: Array(unbundled), bundledIds: [])
-        
+
         return modified
     }
 }

@@ -13,12 +13,12 @@ import Foundation
  on a struct's built-in copy mechanism to function.  Behavior when applied to classes
  is currently undefined and will likely result in errors.
  */
-public protocol State: Any { }
+public protocol State: Any {}
 
 /**
  Typealias for state handlers implemented by subscribers.  T represents
  the type of state desired.
- 
+
  example:
  ```
  store.subscribe(self) { (state: MyState) in

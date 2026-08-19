@@ -1,10 +1,8 @@
 import XCTest
-
 @testable import InferiseAnalytics
 
 final class Analytics_Tests: XCTestCase {
-    override func setUpWithError() throws {
-    }
+    override func setUpWithError() throws {}
 
     func testBaseEventCreation() {
         let analytics = Analytics(configuration: Configuration(writeKey: uniqueWriteKey()))
@@ -58,7 +56,7 @@ final class Analytics_Tests: XCTestCase {
         wait(for: [expectation], timeout: .infinity)
     }
 
-    func testDestinationInitialUpdateOnlyOnce() {
+    func testDestinationInitialUpdateOnlyOnce() throws {
         let writeKey = uniqueWriteKey()
         // need to clear settings for this one.
         UserDefaults.standard.removePersistentDomain(forName: "com.inferise.storage.\(writeKey)")
@@ -73,7 +71,7 @@ final class Analytics_Tests: XCTestCase {
         if let existing = settings.integrations?.dictionaryValue {
             var newIntegrations = existing
             newIntegrations[myDestination.key] = true
-            settings.integrations = try! JSON(newIntegrations)
+            settings.integrations = try JSON(newIntegrations)
         }
         let configuration = Configuration(writeKey: writeKey)
         configuration.defaultSettings(settings)
@@ -103,7 +101,7 @@ final class Analytics_Tests: XCTestCase {
         checkIfLeaked(analytics)
     }
 
-    func testDestinationEnabled() {
+    func testDestinationEnabled() throws {
         let writeKey = uniqueWriteKey()
         // need to clear settings for this one.
         UserDefaults.standard.removePersistentDomain(forName: "com.inferise.storage.\(writeKey)")
@@ -118,7 +116,7 @@ final class Analytics_Tests: XCTestCase {
         if let existing = settings.integrations?.dictionaryValue {
             var newIntegrations = existing
             newIntegrations[myDestination.key] = true
-            settings.integrations = try! JSON(newIntegrations)
+            settings.integrations = try JSON(newIntegrations)
         }
         let configuration = Configuration(writeKey: writeKey)
         configuration.defaultSettings(settings)
@@ -138,48 +136,48 @@ final class Analytics_Tests: XCTestCase {
     }
 
     // Linux & Windows don't support XCTExpectFailure
-    /*#if !os(Linux) && !os(Windows)
-        func testDestinationNotEnabled() {
-            // need to clear settings for this one.
-            UserDefaults.standard.removePersistentDomain(forName: "com.inferise.storage.test")
+    /* #if !os(Linux) && !os(Windows)
+         func testDestinationNotEnabled() {
+             // need to clear settings for this one.
+             UserDefaults.standard.removePersistentDomain(forName: "com.inferise.storage.test")
 
-            let expectation = XCTestExpectation(description: "MyDestination Expectation")
-            let myDestination = MyDestination(disabled: true) {
-                expectation.fulfill()
-                print("called")
-                return true
-            }
+             let expectation = XCTestExpectation(description: "MyDestination Expectation")
+             let myDestination = MyDestination(disabled: true) {
+                 expectation.fulfill()
+                 print("called")
+                 return true
+             }
 
-            let configuration = Configuration(writeKey: "testDestNotEnabled")
-            let analytics = Analytics(configuration: configuration)
+             let configuration = Configuration(writeKey: "testDestNotEnabled")
+             let analytics = Analytics(configuration: configuration)
 
-            analytics.add(plugin: myDestination)
+             analytics.add(plugin: myDestination)
 
-            waitUntilStarted(analytics: analytics)
+             waitUntilStarted(analytics: analytics)
 
-            analytics.track(name: "testDestinationEnabled")
+             analytics.track(name: "testDestinationEnabled")
 
-            /*
-             NOTE: It appears this is causing a failure
-                   when the wait expires despite it being expected.
-                   Disabling for now.
-             */
-            XCTExpectFailure {
-                wait(for: [expectation], timeout: 1.0)
-            }
-        }
-    #endif*/
+             /*
+              NOTE: It appears this is causing a failure
+                    when the wait expires despite it being expected.
+                    Disabling for now.
+              */
+             XCTExpectFailure {
+                 wait(for: [expectation], timeout: 1.0)
+             }
+         }
+     #endif */
 
     func testAnonymousId() {
         let analytics = Analytics(configuration: Configuration(writeKey: uniqueWriteKey()))
         let anonId = analytics.anonymousId
 
         XCTAssertTrue(anonId != "")
-        XCTAssertTrue(anonId.count == 36)  // it's a UUID y0.
+        XCTAssertTrue(anonId.count == 36) // it's a UUID y0.
         waitUntilStarted(analytics: analytics)
     }
 
-    func testContext() {
+    func testContext() throws {
         let analytics = Analytics(configuration: Configuration(writeKey: uniqueWriteKey()))
         let outputReader = OutputReaderPlugin()
         analytics.add(plugin: outputReader)
@@ -187,7 +185,7 @@ final class Analytics_Tests: XCTestCase {
         waitUntilStarted(analytics: analytics)
 
         // add a referrer
-        analytics.openURL(URL(string: "https://google.com")!)
+        try analytics.openURL(XCTUnwrap(URL(string: "https://google.com")))
 
         analytics.track(name: "token check")
 
@@ -203,8 +201,8 @@ final class Analytics_Tests: XCTestCase {
         XCTAssertNotNil(context?["library"], "library missing!")
         XCTAssertNotNil(context?["device"], "device missing!")
 
-        let referrer = context?["referrer"] as! [String: Any]
-        XCTAssertEqual(referrer["url"] as! String, "https://google.com")
+        let referrer = try XCTUnwrap(context?["referrer"] as? [String: Any])
+        XCTAssertEqual(referrer["url"] as? String, "https://google.com")
 
         // these keys not present on linux or Windows
         #if !os(Linux) && !os(Windows)
@@ -213,7 +211,7 @@ final class Analytics_Tests: XCTestCase {
         #endif
     }
 
-    func testContextWithUserAgent() {
+    func testContextWithUserAgent() throws {
         let configuration = Configuration(writeKey: uniqueWriteKey())
         configuration.userAgent("testing user agent")
         let analytics = Analytics(configuration: configuration)
@@ -223,7 +221,7 @@ final class Analytics_Tests: XCTestCase {
         waitUntilStarted(analytics: analytics)
 
         // add a referrer
-        analytics.openURL(URL(string: "https://google.com")!)
+        try analytics.openURL(XCTUnwrap(URL(string: "https://google.com")))
 
         analytics.track(name: "token check")
 
@@ -239,8 +237,8 @@ final class Analytics_Tests: XCTestCase {
         XCTAssertNotNil(context?["library"], "library missing!")
         XCTAssertNotNil(context?["device"], "device missing!")
 
-        let referrer = context?["referrer"] as! [String: Any]
-        XCTAssertEqual(referrer["url"] as! String, "https://google.com")
+        let referrer = try XCTUnwrap(context?["referrer"] as? [String: Any])
+        XCTAssertEqual(referrer["url"] as? String, "https://google.com")
 
         // these keys not present on linux
         #if !os(Linux) && !os(Windows)
@@ -280,23 +278,23 @@ final class Analytics_Tests: XCTestCase {
             let trackEvent: TrackEvent? = outputReader.lastEvent as? TrackEvent
             let device = trackEvent?.context?.dictionaryValue
             let token = device?[keyPath: "device.token"] as? String
-            XCTAssertTrue(token?.count == 32)  // it's a uuid w/o the dashes.  36 becomes 32.
+            XCTAssertTrue(token?.count == 32) // it's a uuid w/o the dashes.  36 becomes 32.
         }
     #endif
 
-    func testOpenURL() {
+    func testOpenURL() throws {
         let analytics = Analytics(configuration: Configuration(writeKey: uniqueWriteKey()))
         let outputReader = OutputReaderPlugin()
         analytics.add(plugin: outputReader)
 
         waitUntilStarted(analytics: analytics)
 
-        let url = URL(string: "https://blah.com")!
+        let url = try XCTUnwrap(URL(string: "https://blah.com"))
 
         // you ain't got no options Lt. Dan!
         analytics.openURL(url)
         let urlEvent: TrackEvent? = outputReader.lastEvent as? TrackEvent
-        XCTAssertEqual(urlEvent?.properties?.dictionaryValue!["url"] as! String, "https://blah.com")
+        XCTAssertEqual(urlEvent?.properties?.dictionaryValue?["url"] as? String, "https://blah.com")
 
         // Anyway, like I was sayin' ...
         let options = [
@@ -328,14 +326,15 @@ final class Analytics_Tests: XCTestCase {
                     "shrimp sandwich",
                     "That- that's about it",
                 ],
-            ]
+            ],
         ]
 
         analytics.openURL(url, options: options)
         let urlOptionEvent: TrackEvent? = outputReader.lastEvent as? TrackEvent
         XCTAssertEqual(
-            urlOptionEvent?.properties?.dictionaryValue!["url"] as! String, "https://blah.com")
-        XCTAssertNotNil(urlOptionEvent?.properties?.dictionaryValue!["Shrimp"])
+            urlOptionEvent?.properties?.dictionaryValue?["url"] as? String, "https://blah.com"
+        )
+        XCTAssertNotNil(try XCTUnwrap(urlOptionEvent?.properties?.dictionaryValue?["Shrimp"]))
     }
 
     func testTrack() {
@@ -364,7 +363,7 @@ final class Analytics_Tests: XCTestCase {
         // traits should be an empty object.
         let currentTraits = analytics.traits()
         XCTAssertNotNil(currentTraits)
-        XCTAssertTrue(currentTraits!.isEmpty == true)
+        XCTAssertTrue(currentTraits?.isEmpty == true)
 
         analytics.identify(userId: "brandon", traits: MyTraits(email: "blah@blah.com"))
 
@@ -377,7 +376,7 @@ final class Analytics_Tests: XCTestCase {
 
         let emptyTraits = analytics.traits()
         XCTAssertNotNil(emptyTraits)
-        XCTAssertTrue(emptyTraits!.isEmpty == true)
+        XCTAssertTrue(emptyTraits?.isEmpty == true)
     }
 
     func testUserIdAndTraitsPersistCorrectly() {
@@ -421,7 +420,8 @@ final class Analytics_Tests: XCTestCase {
         XCTAssertTrue(screen1Event?.category == "category1")
 
         analytics.screen(
-            title: "screen2", category: "category2", properties: MyTraits(email: "blah@blah.com"))
+            title: "screen2", category: "category2", properties: MyTraits(email: "blah@blah.com")
+        )
 
         let screen2Event: ScreenEvent? = outputReader.lastEvent as? ScreenEvent
         XCTAssertTrue(screen2Event?.name == "screen2")
@@ -477,11 +477,12 @@ final class Analytics_Tests: XCTestCase {
         XCTAssertNotEqual(currentUserInfo?.traits, newUserInfo?.traits)
     }
 
-    func testFlush() {
+    func testFlush() throws {
         // Use a specific writekey to this test so we do not collide with other cached items.
         let analytics = Analytics(
             configuration: Configuration(writeKey: "testFlush_do_not_reuse_this_writekey")
-                .flushInterval(9999).flushAt(9999))
+                .flushInterval(9999).flushAt(9999)
+        )
 
         waitUntilStarted(analytics: analytics)
 
@@ -489,17 +490,18 @@ final class Analytics_Tests: XCTestCase {
 
         analytics.identify(userId: "brandon", traits: MyTraits(email: "blah@blah.com"))
 
-        let currentBatchCount = analytics.storage.read(.events)!.dataFiles!.count
+        let currentBatchCount = try XCTUnwrap(analytics.storage.read(.events)?.dataFiles?.count)
 
         analytics.flush()
         analytics.track(name: "test")
 
-        let batches = analytics.storage.read(.events)!.dataFiles
-        let newBatchCount = batches!.count
+        let batches = try XCTUnwrap(analytics.storage.read(.events)?.dataFiles)
+        let newBatchCount = try XCTUnwrap(batches?.count)
         // 1 new temp file
         XCTAssertTrue(
             newBatchCount == currentBatchCount + 1,
-            "New Count (\(newBatchCount)) should be \(currentBatchCount) + 1")
+            "New Count (\(newBatchCount)) should be \(currentBatchCount) + 1"
+        )
     }
 
     func testEnabled() {
@@ -512,7 +514,7 @@ final class Analytics_Tests: XCTestCase {
         analytics.track(name: "enabled")
 
         let trackEvent: TrackEvent? = outputReader.lastEvent as? TrackEvent
-        XCTAssertTrue(trackEvent!.event == "enabled")
+        XCTAssertTrue(trackEvent?.event == "enabled")
 
         outputReader.lastEvent = nil
         analytics.enabled = false
@@ -525,7 +527,7 @@ final class Analytics_Tests: XCTestCase {
         analytics.track(name: "enabled")
 
         let newEvent: TrackEvent? = outputReader.lastEvent as? TrackEvent
-        XCTAssertTrue(newEvent!.event == "enabled")
+        XCTAssertTrue(newEvent?.event == "enabled")
     }
 
     func testSetFlushIntervalAfter() {
@@ -535,13 +537,13 @@ final class Analytics_Tests: XCTestCase {
 
         waitUntilStarted(analytics: analytics)
 
-        XCTAssertTrue(intervalPolicy.flushTimer!.interval == 35)
+        XCTAssertTrue(intervalPolicy.flushTimer?.interval == 35)
 
         analytics.flushInterval = 60
 
         RunLoop.main.run(until: Date.distantPast)
 
-        XCTAssertTrue(intervalPolicy.flushTimer!.interval == 60)
+        XCTAssertTrue(intervalPolicy.flushTimer?.interval == 60)
     }
 
     func testSetFlushAtAfter() {
@@ -565,14 +567,15 @@ final class Analytics_Tests: XCTestCase {
         XCTAssertTrue(analytics.configuration.values.flushAt == 1)
     }
 
-    func testPurgeStorage() {
+    func testPurgeStorage() throws {
         // Use a specific writekey to this test so we do not collide with other cached items.
         let analytics = Analytics(
             configuration: Configuration(writeKey: "testFlush_do_not_reuse_this_writekey_either")
                 .flushInterval(9999)
                 .flushAt(9999)
                 .operatingMode(.synchronous)
-                .blockNetworkEgress())
+                .blockNetworkEgress()
+        )
 
         waitUntilStarted(analytics: analytics)
 
@@ -580,7 +583,7 @@ final class Analytics_Tests: XCTestCase {
 
         analytics.identify(userId: "brandon", traits: MyTraits(email: "blah@blah.com"))
 
-        let currentPendingCount = analytics.pendingUploads!.count
+        let currentPendingCount = try XCTUnwrap(analytics.pendingUploads?.count)
 
         XCTAssertEqual(currentPendingCount, 1)
 
@@ -593,11 +596,11 @@ final class Analytics_Tests: XCTestCase {
         analytics.flush()
         analytics.track(name: "test")
 
-        let newPendingCount = analytics.pendingUploads!.count
+        let newPendingCount = try XCTUnwrap(analytics.pendingUploads?.count)
         XCTAssertEqual(newPendingCount, 1)
 
-        let pending = analytics.pendingUploads!
-        analytics.purgeStorage(fileURL: pending.first!)
+        let pending = try XCTUnwrap(analytics.pendingUploads)
+        try analytics.purgeStorage(fileURL: XCTUnwrap(pending.first))
         XCTAssertNil(analytics.pendingUploads)
 
         analytics.purgeStorage()
@@ -634,7 +637,7 @@ final class Analytics_Tests: XCTestCase {
         }
     }
 
-    // Test to ensure bundled and unbundled integrations are populated correctly
+    /// Test to ensure bundled and unbundled integrations are populated correctly
     func testDestinationMetadata() {
         let writeKey = uniqueWriteKey()
         let analytics = Analytics(configuration: Configuration(writeKey: writeKey))
@@ -655,7 +658,7 @@ final class Analytics_Tests: XCTestCase {
                         "Customer.io",
                         "Mixpanel",
                         "Amplitude",
-                    ]
+                    ],
             ]),
             "Mixpanel": JSON(["someKey": "someVal"]),
         ])
@@ -673,7 +676,7 @@ final class Analytics_Tests: XCTestCase {
         XCTAssertEqual(metadata?.unbundled.sorted(), ["Amplitude", "Customer.io"])
     }
 
-    // Test to ensure bundled and active integrations are populated correctly
+    /// Test to ensure bundled and active integrations are populated correctly
     func testDestinationMetadataUnbundled() {
         let writeKey = uniqueWriteKey()
         let analytics = Analytics(configuration: Configuration(writeKey: writeKey))
@@ -691,8 +694,8 @@ final class Analytics_Tests: XCTestCase {
             InferiseDestination.Constants.integrationName.rawValue: JSON([
                 "unbundledIntegrations":
                     [
-                        "Customer.io"
-                    ]
+                        "Customer.io",
+                    ],
             ]),
             "Mixpanel": JSON(["someKey": "someVal"]),
             "Amplitude": JSON(["someKey": "somVal"]),
@@ -719,21 +722,22 @@ final class Analytics_Tests: XCTestCase {
                 request.value(forHTTPHeaderField: "Content-Type"), "application/json; charset=utf-8"
             )
             XCTAssertTrue(
-                request.value(forHTTPHeaderField: "User-Agent")!.contains("inferise-swift/"))
+                request.value(forHTTPHeaderField: "User-Agent")!.contains("inferise-swift/")
+            )
             return request
         }.failNetworkEgress()
-        .errorHandler { error in
-            switch error {
-            case AnalyticsError.networkServerRejected(_, _):
-                // expected: the stubbed session rejects the batch upload
-                break
-            case AnalyticsError.settingsFail(_):
-                // expected: that same stub has no settings body to return
-                break
-            default:
-                XCTFail("\(error)")
+            .errorHandler { error in
+                switch error {
+                case AnalyticsError.networkServerRejected:
+                    // expected: the stubbed session rejects the batch upload
+                    break
+                case AnalyticsError.settingsFail:
+                    // expected: that same stub has no settings body to return
+                    break
+                default:
+                    XCTFail("\(error)")
+                }
             }
-        }
         let analytics = Analytics(configuration: config)
         analytics.storage.hardReset(doYouKnowHowToUseThis: true)
         let outputReader = OutputReaderPlugin()
@@ -784,7 +788,6 @@ final class Analytics_Tests: XCTestCase {
 
         XCTAssertTrue(sourceHit)
         XCTAssertTrue(destHit)
-
     }
 
     func testSharedInstance() {
@@ -807,14 +810,15 @@ final class Analytics_Tests: XCTestCase {
         XCTAssertTrue(shared2 === shared)
     }
 
-    func testAsyncOperatingMode() throws {
+    func testAsyncOperatingMode() {
         // Use a specific writekey to this test so we do not collide with other cached items.
         let analytics = Analytics(
             configuration: Configuration(writeKey: "testFlush_asyncMode")
                 .flushInterval(9999)
                 .flushAt(9999)
                 .operatingMode(.asynchronous)
-                .blockNetworkEgress())
+                .blockNetworkEgress()
+        )
 
         waitUntilStarted(analytics: analytics)
 
@@ -838,14 +842,15 @@ final class Analytics_Tests: XCTestCase {
         XCTAssertNil(analytics.pendingUploads)
     }
 
-    func testSyncOperatingMode() throws {
+    func testSyncOperatingMode() {
         // Use a specific writekey to this test so we do not collide with other cached items.
         let analytics = Analytics(
             configuration: Configuration(writeKey: "testFlush_syncMode")
                 .flushInterval(9999)
                 .flushAt(9999)
                 .operatingMode(.synchronous)
-                .blockNetworkEgress())
+                .blockNetworkEgress()
+        )
 
         waitUntilStarted(analytics: analytics)
 
@@ -873,13 +878,14 @@ final class Analytics_Tests: XCTestCase {
         XCTAssertNil(analytics.pendingUploads)
     }
 
-    func testFindAll() throws {
+    func testFindAll() {
         let analytics = Analytics(
             configuration: Configuration(writeKey: "testFindAll")
                 .flushInterval(9999)
                 .flushAt(9999)
                 .operatingMode(.synchronous)
-                .blockNetworkEgress())
+                .blockNetworkEgress()
+        )
 
         analytics.add(plugin: ZiggyPlugin())
         analytics.add(plugin: ZiggyPlugin())
@@ -896,11 +902,11 @@ final class Analytics_Tests: XCTestCase {
         let ziggysFound = analytics.findAll(pluginType: ZiggyPlugin.self)
         let goobersFound = myDestination.findAll(pluginType: GooberPlugin.self)
 
-        XCTAssertEqual(ziggysFound!.count, 3)
-        XCTAssertEqual(goobersFound!.count, 2)
+        XCTAssertEqual(ziggysFound?.count, 3)
+        XCTAssertEqual(goobersFound?.count, 2)
     }
 
-    func testJSONNaNDefaultHandlingZero() throws {
+    func testJSONNaNDefaultHandlingZero() {
         // notice we didn't set the nan handling option.  zero is the default.
         let analytics = Analytics(configuration: Configuration(writeKey: uniqueWriteKey()))
         let outputReader = OutputReaderPlugin()
@@ -914,10 +920,10 @@ final class Analytics_Tests: XCTestCase {
         XCTAssertTrue(trackEvent?.event == "test track")
         XCTAssertTrue(trackEvent?.type == "track")
         let d: Double? = trackEvent?.properties?.value(forKeyPath: "TestNaN")
-        XCTAssertTrue(d! == 0)
+        XCTAssertTrue(d == 0)
     }
 
-    func testJSONNaNHandlingNull() throws {
+    func testJSONNaNHandlingNull() {
         let analytics = Analytics(
             configuration: Configuration(writeKey: uniqueWriteKey())
                 .jsonNonConformingNumberStrategy(.null)
@@ -939,7 +945,7 @@ final class Analytics_Tests: XCTestCase {
     // Linux doesn't know what URLProtocol is and on watchOS it somehow works differently and isn't hit.
     #if !os(Linux) && !os(watchOS) && !os(Windows)
         func testFailedUploadResponse() throws {
-            //register our network blocker (returns 400 response)
+            // register our network blocker (returns 400 response)
             guard URLProtocol.registerClass(FailedNetworkCalls.self) else {
                 XCTFail()
                 return
@@ -949,7 +955,7 @@ final class Analytics_Tests: XCTestCase {
 
             waitUntilStarted(analytics: analytics)
 
-            //set the httpClient to use our blocker session
+            // set the httpClient to use our blocker session
             let destination = analytics.find(pluginType: InferiseDestination.self)
             let configuration = URLSessionConfiguration.ephemeral
             configuration.allowsCellularAccess = true
@@ -964,15 +970,16 @@ final class Analytics_Tests: XCTestCase {
             ]
 
             let blockSession = URLSession(
-                configuration: configuration, delegate: nil, delegateQueue: nil)
+                configuration: configuration, delegate: nil, delegateQueue: nil
+            )
 
             destination?.httpClient?.session = blockSession
 
             analytics.track(name: "test track", properties: ["Malformed Paylod": "My Failed Prop"])
 
-            //get fileUrl from track call
+            // get fileUrl from track call
             let storedEvents = analytics.storage.read(.events)
-            let fileURL = storedEvents!.dataFiles![0]
+            let fileURL = try XCTUnwrap(storedEvents?.dataFiles?[0])
 
             let expectation = XCTestExpectation()
 
@@ -990,12 +997,12 @@ final class Analytics_Tests: XCTestCase {
         }
     #endif
 
-    func testAnonIDGenerator() throws {
+    func testAnonIDGenerator() {
         class MyAnonIdGenerator: AnonymousIdGenerator {
             var currentId: String = "blah-"
             func newAnonymousId() -> String {
-                currentId = currentId + "1"
-                return currentId
+                self.currentId = self.currentId + "1"
+                return self.currentId
             }
         }
 
@@ -1005,7 +1012,9 @@ final class Analytics_Tests: XCTestCase {
         let anonIdGenerator = MyAnonIdGenerator()
         var analytics: Analytics? = Analytics(
             configuration: Configuration(writeKey: "anonIdGenerator").anonymousIdGenerator(
-                anonIdGenerator))
+                anonIdGenerator
+            )
+        )
         let outputReader = OutputReaderPlugin()
         analytics?.add(plugin: outputReader)
 
@@ -1051,7 +1060,9 @@ final class Analytics_Tests: XCTestCase {
         // make sure it makes it to the next instance
         analytics = Analytics(
             configuration: Configuration(writeKey: "anonIdGenerator").anonymousIdGenerator(
-                anonIdGenerator))
+                anonIdGenerator
+            )
+        )
         analytics?.add(plugin: outputReader)
 
         waitUntilStarted(analytics: analytics)
@@ -1063,17 +1074,18 @@ final class Analytics_Tests: XCTestCase {
         XCTAssertEqual(outputReader.lastEvent?.anonymousId, anonIdGenerator.currentId)
     }
 
-    func testSingularEnrichment() throws {
+    func testSingularEnrichment() {
         let analytics = Analytics(configuration: Configuration(writeKey: uniqueWriteKey()))
         let outputReader = OutputReaderPlugin()
         analytics.add(plugin: outputReader)
 
         let addEventOrigin: EnrichmentClosure = { event in
-            return Context.insertOrigin(
+            Context.insertOrigin(
                 event: event,
                 data: [
-                    "type": "mobile"
-                ])
+                    "type": "mobile",
+                ]
+            )
         }
 
         analytics.track(name: "enrichment check pre startup", enrichments: [addEventOrigin])
@@ -1155,7 +1167,7 @@ final class Analytics_Tests: XCTestCase {
 
         wait(for: [noCallExpectation], timeout: 1.0)
         XCTAssertEqual(oldCallCount, callCount)
-        XCTAssertEqual("brandon", capturedUserInfo?.userId)  // Still has old value
+        XCTAssertEqual("brandon", capturedUserInfo?.userId) // Still has old value
     }
 
     func testUserInfoSubscriptionWithReset() {
@@ -1211,7 +1223,7 @@ final class Analytics_Tests: XCTestCase {
         XCTAssertEqual(traitsDict?.count, 0)
     }
 
-    func testUserInfoSubscriptionWithReferrer() {
+    func testUserInfoSubscriptionWithReferrer() throws {
         let writeKey = uniqueWriteKey()
         Storage.hardSettingsReset(writeKey: writeKey)
         let analytics = Analytics(configuration: Configuration(writeKey: writeKey))
@@ -1241,7 +1253,7 @@ final class Analytics_Tests: XCTestCase {
         XCTAssertNil(capturedUserInfo?.referrer)
 
         // Set a referrer
-        analytics.openURL(URL(string: "https://google.com")!)
+        try analytics.openURL(XCTUnwrap(URL(string: "https://google.com")))
         wait(for: [referrerExpectation], timeout: 2.0)
 
         XCTAssertEqual(2, callCount)
@@ -1259,10 +1271,10 @@ final class Analytics_Tests: XCTestCase {
         var secondCallCount = 0
 
         let initialExpectation = XCTestExpectation(description: "Initial callbacks")
-        initialExpectation.expectedFulfillmentCount = 2  // Both subscriptions
+        initialExpectation.expectedFulfillmentCount = 2 // Both subscriptions
 
         let identifyExpectation = XCTestExpectation(description: "Identify callbacks")
-        identifyExpectation.expectedFulfillmentCount = 2  // Both subscriptions
+        identifyExpectation.expectedFulfillmentCount = 2 // Both subscriptions
 
         // Create two subscriptions
         analytics.subscribeToUserInfo { _ in
@@ -1304,7 +1316,7 @@ final class Analytics_Tests: XCTestCase {
         waitUntilStarted(analytics: analytics)
 
         let expectation = XCTestExpectation(description: "Handler called on main queue")
-        expectation.expectedFulfillmentCount = 2  // Initial + identify
+        expectation.expectedFulfillmentCount = 2 // Initial + identify
 
         analytics.subscribeToUserInfo { userInfo in
             XCTAssertTrue(Thread.isMainThread, "Handler should be called on main thread")
@@ -1324,12 +1336,13 @@ final class Analytics_Tests: XCTestCase {
         waitUntilStarted(analytics: analytics)
 
         // Should not crash with invalid ID
-        analytics.unsubscribe(999999)
+        analytics.unsubscribe(999_999)
         analytics.unsubscribe(-1)
 
         // Should work fine after bogus unsubscribe calls
         let expectation = XCTestExpectation(
-            description: "Subscription works after invalid unsubscribe")
+            description: "Subscription works after invalid unsubscribe"
+        )
 
         analytics.subscribeToUserInfo { _ in
             expectation.fulfill()
@@ -1338,7 +1351,7 @@ final class Analytics_Tests: XCTestCase {
         wait(for: [expectation], timeout: 2.0)
     }
 
-    func testHttpConfigBuilder() {
+    func testHttpConfigBuilder() throws {
         let httpConfig = HttpConfig(
             rateLimitConfig: RateLimitConfig(enabled: true),
             backoffConfig: BackoffConfig(enabled: true)
@@ -1348,11 +1361,11 @@ final class Analytics_Tests: XCTestCase {
             .httpConfig(httpConfig)
 
         XCTAssertNotNil(config.values.httpConfig)
-        XCTAssertTrue(config.values.httpConfig!.rateLimitConfig.enabled)
-        XCTAssertTrue(config.values.httpConfig!.backoffConfig.enabled)
+        XCTAssertTrue(try XCTUnwrap(config.values.httpConfig?.rateLimitConfig.enabled))
+        XCTAssertTrue(try XCTUnwrap(config.values.httpConfig?.backoffConfig.enabled))
     }
 
-    func testRetrySystemIntegration() {
+    func testRetrySystemIntegration() throws {
         let httpConfig = HttpConfig(
             rateLimitConfig: RateLimitConfig(enabled: true),
             backoffConfig: BackoffConfig(enabled: true)
@@ -1365,8 +1378,8 @@ final class Analytics_Tests: XCTestCase {
 
         // Verify httpConfig is set
         XCTAssertNotNil(analytics.configuration.values.httpConfig)
-        XCTAssertTrue(analytics.configuration.values.httpConfig!.rateLimitConfig.enabled)
-        XCTAssertTrue(analytics.configuration.values.httpConfig!.backoffConfig.enabled)
+        XCTAssertTrue(try XCTUnwrap(analytics.configuration.values.httpConfig?.rateLimitConfig.enabled))
+        XCTAssertTrue(try XCTUnwrap(analytics.configuration.values.httpConfig?.backoffConfig.enabled))
 
         // Verify InferiseDestination can access it via HTTPClient
         // HTTPClient reads httpConfig from analytics in init (Task 11)

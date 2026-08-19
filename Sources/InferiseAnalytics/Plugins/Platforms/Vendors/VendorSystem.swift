@@ -7,79 +7,79 @@
 
 import Foundation
 
-internal struct ScreenSize {
+struct ScreenSize {
     let width: Double
     let height: Double
 }
 
-internal enum ConnectionType {
+enum ConnectionType {
     case cellular
     case wifi
     case bluetooth
 }
 
-internal enum ConnectionStatus {
+enum ConnectionStatus {
     case offline
     case online(ConnectionType)
     case unknown
 }
 
-internal class VendorSystem {
+class VendorSystem {
     var manufacturer: String {
-        return "unknown"
+        "unknown"
     }
-    
+
     var type: String {
-        return "unknown"
+        "unknown"
     }
-    
+
     var model: String {
-        return "unknown"
+        "unknown"
     }
-    
+
     var name: String {
-        return "unknown"
+        "unknown"
     }
-    
+
     var identifierForVendor: String? {
-        return nil
+        nil
     }
-    
+
     var systemName: String {
-        return "unknown"
+        "unknown"
     }
-    
+
     var systemVersion: String {
-        return ""
+        ""
     }
-    
+
     var screenSize: ScreenSize {
-        return ScreenSize(width: 0, height: 0)
+        ScreenSize(width: 0, height: 0)
     }
-    
+
     var userAgent: String? {
-        return "unknown"
+        "unknown"
     }
-    
+
     var connection: ConnectionStatus {
-        return ConnectionStatus.unknown
+        ConnectionStatus.unknown
     }
-    
+
     var requiredPlugins: [PlatformPlugin] {
-        return []
+        []
     }
-    
+
     static var current: VendorSystem = {
         #if os(iOS) || os(tvOS) || os(visionOS) || targetEnvironment(macCatalyst)
-        return iOSVendorSystem()
+            return iOSVendorSystem()
         #elseif os(macOS)
-        return MacOSVendorSystem()
+            return MacOSVendorSystem()
         #elseif os(watchOS)
-        return watchOSVendorSystem()
+            return watchOSVendorSystem()
         #elseif os(Linux)
-        return LinuxVendorSystem()
+            return LinuxVendorSystem()
         #else
-        return VendorSystem()
+            return VendorSystem()
         #endif
     }()
 }

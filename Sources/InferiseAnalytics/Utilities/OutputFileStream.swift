@@ -10,14 +10,14 @@ import Foundation
 /** C style output filestream ----------------- */
 
 #if os(Linux)
-import Glibc
+    import Glibc
 #elseif os(Windows)
-import WinSDK
+    import WinSDK
 #else
-import Darwin.C
+    import Darwin.C
 #endif
 
-internal class OutputFileStream {
+class OutputFileStream {
     enum OutputStreamError: Error {
         case invalidPath(String)
         case unableToOpen(String)
@@ -26,7 +26,7 @@ internal class OutputFileStream {
         case unableToClose(String)
     }
 
-    var fileHandle: FileHandle? = nil
+    var fileHandle: FileHandle?
     let fileURL: URL
 
     init(fileURL: URL) throws {
@@ -37,34 +37,36 @@ internal class OutputFileStream {
 
     /// Create attempts to create + open
     func create() throws {
-        let path = fileURL.path
+        let path = self.fileURL.path
         if FileManager.default.fileExists(atPath: path) {
             throw OutputStreamError.unableToCreate(path)
         } else {
-            let created = FileManager.default.createFile(atPath: fileURL.path, contents: nil)
+            let created = FileManager.default.createFile(atPath: self.fileURL.path, contents: nil)
             if created == false {
                 throw OutputStreamError.unableToCreate(path)
             } else {
-                try open()
+                try self.open()
             }
         }
     }
 
     /// Open simply opens the file, no attempt at creation is made.
     func open() throws {
-        if fileHandle != nil { return }
+        if self.fileHandle != nil {
+            return
+        }
         do {
-            fileHandle = try FileHandle(forWritingTo: fileURL)
+            self.fileHandle = try FileHandle(forWritingTo: self.fileURL)
             if #available(iOS 13.4, macOS 10.15.4, tvOS 13.4, *) {
-                _ = try? fileHandle?.seekToEnd()
+                _ = try? self.fileHandle?.seekToEnd()
             } else if #available(tvOS 13.0, *) {
-                try? fileHandle?.seek(toOffset: .max)
+                try? self.fileHandle?.seek(toOffset: .max)
             } else {
                 // unsupported
-                throw OutputStreamError.unableToOpen(fileURL.path)
+                throw OutputStreamError.unableToOpen(self.fileURL.path)
             }
         } catch {
-            throw OutputStreamError.unableToOpen(fileURL.path)
+            throw OutputStreamError.unableToOpen(self.fileURL.path)
         }
     }
 
@@ -72,27 +74,27 @@ internal class OutputFileStream {
         guard data.isEmpty == false else { return }
         if #available(macOS 10.15.4, iOS 13.4, macCatalyst 13.4, tvOS 13.4, watchOS 13.4, *) {
             do {
-                try fileHandle?.write(contentsOf: data)
+                try self.fileHandle?.write(contentsOf: data)
             } catch {
-                throw OutputStreamError.unableToWrite(fileURL.path)
+                throw OutputStreamError.unableToWrite(self.fileURL.path)
             }
         } else {
             // Fallback on earlier versions
-            fileHandle?.write(data)
+            self.fileHandle?.write(data)
         }
     }
 
     func write(_ string: String) throws {
         guard string.isEmpty == false else { return }
         if let data = string.data(using: .utf8) {
-            try write(data)
+            try self.write(data)
         }
     }
 
     func close() throws {
         do {
-            let existing = fileHandle
-            fileHandle = nil
+            let existing = self.fileHandle
+            self.fileHandle = nil
             if #available(tvOS 13.0, *) {
                 try existing?.synchronize() // this might be overkill, but JIC.
                 try existing?.close()
@@ -102,7 +104,7 @@ internal class OutputFileStream {
                 existing?.closeFile()
             }
         } catch {
-            throw OutputStreamError.unableToClose(fileURL.path)
+            throw OutputStreamError.unableToClose(self.fileURL.path)
         }
     }
 }

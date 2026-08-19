@@ -10,19 +10,19 @@ import Foundation
 public class DeviceToken: PlatformPlugin {
     public let type = PluginType.before
     public weak var analytics: Analytics?
-    
-    public var token: String? = nil
 
-    public required init() { }
-    
+    public var token: String?
+
+    public required init() {}
+
     public func execute<T: RawEvent>(event: T?) -> T? {
         guard var workingEvent = event else { return event }
-        if var context = workingEvent.context?.dictionaryValue, let token = token {
+        if var context = workingEvent.context?.dictionaryValue, let token {
             context[keyPath: "device.token"] = token
             do {
                 workingEvent.context = try JSON(context)
             } catch {
-                analytics?.reportInternalError(error)
+                self.analytics?.reportInternalError(error)
             }
         }
         return workingEvent

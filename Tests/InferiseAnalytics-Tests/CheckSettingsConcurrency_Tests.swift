@@ -7,9 +7,7 @@ import XCTest
 @testable import InferiseAnalytics
 
 class CheckSettingsConcurrency_Tests: XCTestCase {
-
-    override func setUpWithError() throws {
-    }
+    override func setUpWithError() throws {}
 
     func testTryBeginCheckingSettingsReturnsTrueWhenFlagIsClear() {
         let analytics = Analytics(configuration: Configuration(writeKey: uniqueWriteKey()))

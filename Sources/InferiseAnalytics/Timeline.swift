@@ -8,29 +8,28 @@
 import Foundation
 import Sovran
 
-
 // MARK: - Main Timeline
 
 public class Timeline {
-    internal let plugins: [PluginType: Mediator]
-    
+    let plugins: [PluginType: Mediator]
+
     public init() {
         self.plugins = [
             .before: Mediator(),
             .enrichment: Mediator(),
             .destination: Mediator(),
             .after: Mediator(),
-            .utility: Mediator()
+            .utility: Mediator(),
         ]
     }
-    
+
     @discardableResult
-    internal func process<E: RawEvent>(incomingEvent: E) -> E? {
+    func process<E: RawEvent>(incomingEvent: E) -> E? {
         // apply .before and .enrichment types first ...
-        let beforeResult = applyPlugins(type: .before, event: incomingEvent)
+        let beforeResult = self.applyPlugins(type: .before, event: incomingEvent)
         // .enrichment here is akin to source middleware in the old analytics-ios.
-        var enrichmentResult = applyPlugins(type: .enrichment, event: beforeResult)
-        
+        var enrichmentResult = self.applyPlugins(type: .enrichment, event: beforeResult)
+
         if let enrichments = enrichmentResult?.enrichments {
             for closure in enrichments {
                 if let result = closure(enrichmentResult) as? E {
@@ -40,20 +39,20 @@ public class Timeline {
                 }
             }
         }
-        
+
         // once the event enters a destination, we don't want
         // to know about changes that happen there. those changes
         // are to only be received by the destination.
-        _ = applyPlugins(type: .destination, event: enrichmentResult)
-        
+        _ = self.applyPlugins(type: .destination, event: enrichmentResult)
+
         // apply .after plugins ...
-        let afterResult = applyPlugins(type: .after, event: enrichmentResult)
+        let afterResult = self.applyPlugins(type: .after, event: enrichmentResult)
 
         return afterResult
     }
-    
-    // helper method used by DestinationPlugins and Timeline
-    internal func applyPlugins<E: RawEvent>(type: PluginType, event: E?) -> E? {
+
+    /// helper method used by DestinationPlugins and Timeline
+    func applyPlugins<E: RawEvent>(type: PluginType, event: E?) -> E? {
         var result: E? = event
         if let mediator = plugins[type], let e = event {
             result = mediator.execute(event: e)
@@ -62,29 +61,29 @@ public class Timeline {
     }
 }
 
-internal class Mediator {
-    // @Atomic serializes reads and writes to the plugin array. The
-    // wrappedValue getter (used when iterating `plugins`) acquires the
-    // lock, returns a CoW snapshot, and releases. Mutations go through
-    // `mutate` so the check/update happens in a single critical section.
-    // Callers must not invoke Plugin code from inside a `mutate` closure.
-    @Atomic internal var plugins = [Plugin]()
+class Mediator {
+    /// @Atomic serializes reads and writes to the plugin array. The
+    /// wrappedValue getter (used when iterating `plugins`) acquires the
+    /// lock, returns a CoW snapshot, and releases. Mutations go through
+    /// `mutate` so the check/update happens in a single critical section.
+    /// Callers must not invoke Plugin code from inside a `mutate` closure.
+    @Atomic var plugins = [Plugin]()
 
-    internal func add(plugin: Plugin) {
+    func add(plugin: Plugin) {
         _plugins.mutate { $0.append(plugin) }
     }
 
-    internal func remove(plugin: Plugin) {
+    func remove(plugin: Plugin) {
         _plugins.mutate { $0.removeAll { $0 === plugin } }
     }
 
-    internal func execute<T: RawEvent>(event: T) -> T? {
+    func execute<T: RawEvent>(event: T) -> T? {
         var result: T? = event
 
         // Swift evaluates the sequence expression once, so the @Atomic
         // getter fires a single time here — one acquire, one CoW copy,
         // release — and the loop body iterates the snapshot lock-free.
-        for plugin in plugins {
+        for plugin in self.plugins {
             if let r = result {
                 // Drop the event return because we don't care about the
                 // final result.
@@ -100,14 +99,13 @@ internal class Mediator {
     }
 }
 
-
 // MARK: - Plugin Support
 
 extension Timeline {
-    internal func apply(_ closure: (Plugin) -> Void) {
+    func apply(_ closure: (Plugin) -> Void) {
         for type in PluginType.allCases {
             if let mediator = plugins[type] {
-                mediator.plugins.forEach { (plugin) in
+                for plugin in mediator.plugins {
                     closure(plugin)
                     if let destPlugin = plugin as? DestinationPlugin {
                         destPlugin.apply(closure: closure)
@@ -116,56 +114,56 @@ extension Timeline {
             }
         }
     }
-    
-    internal func add(plugin: Plugin) {
+
+    func add(plugin: Plugin) {
         if let mediator = plugins[plugin.type] {
             mediator.add(plugin: plugin)
         }
     }
-    
-    internal func remove(plugin: Plugin) {
+
+    func remove(plugin: Plugin) {
         // remove all plugins with this name in every category
         for type in PluginType.allCases {
             if let mediator = plugins[type] {
-                let toRemove = mediator.plugins.filter { (storedPlugin) -> Bool in
+                let toRemove = mediator.plugins.filter { storedPlugin -> Bool in
                     return plugin === storedPlugin
                 }
-                toRemove.forEach { (plugin) in
+                for plugin in toRemove {
                     plugin.shutdown()
                     mediator.remove(plugin: plugin)
                 }
             }
         }
     }
-    
-    internal func find<T: Plugin>(pluginType: T.Type) -> T? {
+
+    func find<T: Plugin>(pluginType: T.Type) -> T? {
         var found = [Plugin]()
         for type in PluginType.allCases {
             if let mediator = plugins[type] {
-                found.append(contentsOf: mediator.plugins.filter { (plugin) -> Bool in
+                found.append(contentsOf: mediator.plugins.filter { plugin -> Bool in
                     return plugin is T
                 })
             }
         }
         return found.first as? T
     }
-    
-    internal func findAll<T: Plugin>(pluginType: T.Type) -> [T]? {
+
+    func findAll<T: Plugin>(pluginType: T.Type) -> [T]? {
         var found = [Plugin]()
         for type in PluginType.allCases {
             if let mediator = plugins[type] {
-                found.append(contentsOf: mediator.plugins.filter { (plugin) -> Bool in
+                found.append(contentsOf: mediator.plugins.filter { plugin -> Bool in
                     return plugin is T
                 })
             }
         }
         return found as? [T]
     }
-    
-    internal func find(key: String) -> DestinationPlugin? {
+
+    func find(key: String) -> DestinationPlugin? {
         var found = [Plugin]()
         if let mediator = plugins[.destination] {
-            found.append(contentsOf: mediator.plugins.filter{ plugin in
+            found.append(contentsOf: mediator.plugins.filter { plugin in
                 guard let p = plugin as? DestinationPlugin else { return false }
                 return p.key == key
             })
@@ -179,9 +177,9 @@ extension Timeline {
 extension Plugin {
     public func execute<T: RawEvent>(event: T?) -> T? {
         // do nothing.
-        return event
+        event
     }
-    
+
     public func update(settings: Settings, type: UpdateType) {
         // do nothing by default, user can override.
     }
@@ -195,46 +193,46 @@ extension EventPlugin {
     public func execute<T: RawEvent>(event: T?) -> T? {
         var result: T? = event
         switch result {
-            case let r as IdentifyEvent:
-                result = self.identify(event: r) as? T
-            case let r as TrackEvent:
-                result = self.track(event: r) as? T
-            case let r as ScreenEvent:
-                result = self.screen(event: r) as? T
-            case let r as AliasEvent:
-                result = self.alias(event: r) as? T
-            case let r as GroupEvent:
-                result = self.group(event: r) as? T
-            default:
-                break
+        case let r as IdentifyEvent:
+            result = self.identify(event: r) as? T
+        case let r as TrackEvent:
+            result = self.track(event: r) as? T
+        case let r as ScreenEvent:
+            result = self.screen(event: r) as? T
+        case let r as AliasEvent:
+            result = self.alias(event: r) as? T
+        case let r as GroupEvent:
+            result = self.group(event: r) as? T
+        default:
+            break
         }
         return result
     }
 
-    // Default implementations that forward the event. This gives plugin
-    // implementors the chance to interject on an event.
+    /// Default implementations that forward the event. This gives plugin
+    /// implementors the chance to interject on an event.
     public func identify(event: IdentifyEvent) -> IdentifyEvent? {
-        return event
+        event
     }
-    
+
     public func track(event: TrackEvent) -> TrackEvent? {
-        return event
+        event
     }
-    
+
     public func screen(event: ScreenEvent) -> ScreenEvent? {
-        return event
+        event
     }
-    
+
     public func group(event: GroupEvent) -> GroupEvent? {
-        return event
+        event
     }
-    
+
     public func alias(event: AliasEvent) -> AliasEvent? {
-        return event
+        event
     }
-    
-    public func flush() { }
-    public func reset() { }
+
+    public func flush() {}
+    public func reset() {}
 }
 
 // MARK: - Destination Timeline
@@ -247,55 +245,54 @@ extension DestinationPlugin {
         }
         return result
     }
-    
-    internal func isDestinationEnabled(event: RawEvent) -> Bool {
+
+    func isDestinationEnabled(event: RawEvent) -> Bool {
         var customerDisabled = false
         if let disabled: Bool = event.integrations?.value(forKeyPath: JSONKeyPath(self.key)), disabled == false {
             customerDisabled = true
         }
-        
+
         var hasSettings = false
         if let settings = analytics?.settings() {
             hasSettings = settings.hasIntegrationSettings(forPlugin: self)
         }
-        
-        return (hasSettings == true && customerDisabled == false)
+
+        return hasSettings == true && customerDisabled == false
     }
 
-    internal func process<E: RawEvent>(incomingEvent: E) -> E? {
+    func process<E: RawEvent>(incomingEvent: E) -> E? {
         // This will process plugins (think destination middleware) that are tied
         // to this destination.
-        
+
         var result: E? = nil
-        
-        if isDestinationEnabled(event: incomingEvent) {
+
+        if self.isDestinationEnabled(event: incomingEvent) {
             // apply .before and .enrichment types first ...
             let beforeResult = timeline.applyPlugins(type: .before, event: incomingEvent)
             let enrichmentResult = timeline.applyPlugins(type: .enrichment, event: beforeResult)
-            
+
             // now we execute any overrides we may have made.  basically, the idea is to take an
             // incoming event, like identify, and map it to whatever is appropriate for this destination.
             var destinationResult: E? = nil
             switch enrichmentResult {
-                case let e as IdentifyEvent:
-                    destinationResult = identify(event: e) as? E
-                case let e as TrackEvent:
-                    destinationResult = track(event: e) as? E
-                case let e as ScreenEvent:
-                    destinationResult = screen(event: e) as? E
-                case let e as GroupEvent:
-                    destinationResult = group(event: e) as? E
-                case let e as AliasEvent:
-                    destinationResult = alias(event: e) as? E
-                default:
-                    break
+            case let e as IdentifyEvent:
+                destinationResult = identify(event: e) as? E
+            case let e as TrackEvent:
+                destinationResult = track(event: e) as? E
+            case let e as ScreenEvent:
+                destinationResult = screen(event: e) as? E
+            case let e as GroupEvent:
+                destinationResult = group(event: e) as? E
+            case let e as AliasEvent:
+                destinationResult = alias(event: e) as? E
+            default:
+                break
             }
-            
+
             // apply .after plugins ...
             result = timeline.applyPlugins(type: .after, event: destinationResult)
         }
-        
+
         return result
     }
 }
-

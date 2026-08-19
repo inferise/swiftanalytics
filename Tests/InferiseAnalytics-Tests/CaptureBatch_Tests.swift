@@ -20,44 +20,44 @@
 
 #if !os(Linux) && !os(Windows)
 
-import XCTest
+    import XCTest
+    @testable import InferiseAnalytics
 
-@testable import InferiseAnalytics
+    class CaptureBatch_Tests: XCTestCase {
+        func testCaptureRealBatch() throws {
+            guard let destination = ProcessInfo.processInfo.environment["CAPTURE_BATCH_TO"] else {
+                throw XCTSkip("Set CAPTURE_BATCH_TO to regenerate the ingest fixture.")
+            }
 
-class CaptureBatch_Tests: XCTestCase {
-    func testCaptureRealBatch() throws {
-        guard let destination = ProcessInfo.processInfo.environment["CAPTURE_BATCH_TO"] else {
-            throw XCTSkip("Set CAPTURE_BATCH_TO to regenerate the ingest fixture.")
+            // The write key is baked into the batch trailer, so it has to match the
+            // one the ingest contract test registers.
+            let analytics = Analytics(
+                configuration: Configuration(writeKey: "inf-local-dev-key")
+                    .flushAt(9999)
+                    .flushInterval(9999)
+                    .blockNetworkEgress()
+            )
+
+            waitUntilStarted(analytics: analytics)
+            analytics.storage.hardReset(doYouKnowHowToUseThis: true)
+
+            // One of each event type the ingest fixture asserts on.
+            analytics.track(name: "Signed In", properties: ["plan": "pro", "seats": 3])
+            analytics.identify(userId: "u1", traits: ["email": "cody@inferise.com"])
+            analytics.screen(title: "Dashboard")
+
+            // Reading the events finalizes the open file — writing its trailer with
+            // sentAt and writeKey — which is what makes this a complete batch.
+            let result = try XCTUnwrap(analytics.storage.read(.events))
+            let batchFile = try XCTUnwrap(result.dataFiles?.first)
+
+            let target = URL(fileURLWithPath: destination)
+            try? FileManager.default.removeItem(at: target)
+            try FileManager.default.copyItem(at: batchFile, to: target)
+            print("Captured batch fixture -> \(target.path)")
+
+            analytics.storage.hardReset(doYouKnowHowToUseThis: true)
         }
-
-        // The write key is baked into the batch trailer, so it has to match the
-        // one the ingest contract test registers.
-        let analytics = Analytics(
-            configuration: Configuration(writeKey: "inf-local-dev-key")
-                .flushAt(9999)
-                .flushInterval(9999)
-                .blockNetworkEgress())
-
-        waitUntilStarted(analytics: analytics)
-        analytics.storage.hardReset(doYouKnowHowToUseThis: true)
-
-        // One of each event type the ingest fixture asserts on.
-        analytics.track(name: "Signed In", properties: ["plan": "pro", "seats": 3])
-        analytics.identify(userId: "u1", traits: ["email": "cody@inferise.com"])
-        analytics.screen(title: "Dashboard")
-
-        // Reading the events finalizes the open file — writing its trailer with
-        // sentAt and writeKey — which is what makes this a complete batch.
-        let result = try XCTUnwrap(analytics.storage.read(.events))
-        let batchFile = try XCTUnwrap(result.dataFiles?.first)
-
-        let target = URL(fileURLWithPath: destination)
-        try? FileManager.default.removeItem(at: target)
-        try FileManager.default.copyItem(at: batchFile, to: target)
-        print("Captured batch fixture -> \(target.path)")
-
-        analytics.storage.hardReset(doYouKnowHowToUseThis: true)
     }
-}
 
 #endif

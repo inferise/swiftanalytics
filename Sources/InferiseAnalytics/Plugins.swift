@@ -31,7 +31,7 @@ public enum UpdateType {
 public protocol Plugin: AnyObject {
     var type: PluginType { get }
     var analytics: Analytics? { get set }
-    
+
     func configure(analytics: Analytics)
     func update(settings: Settings, type: UpdateType)
     func execute<T: RawEvent>(event: T?) -> T?
@@ -56,7 +56,7 @@ public protocol DestinationPlugin: EventPlugin {
     func remove(plugin: Plugin)
 }
 
-public protocol UtilityPlugin: EventPlugin { }
+public protocol UtilityPlugin: EventPlugin {}
 
 public protocol VersionedPlugin {
     static func version() -> String
@@ -66,27 +66,27 @@ public protocol FlushCompletion {
     func flush(group: DispatchGroup)
 }
 
-// For internal platform-specific bits
-internal protocol PlatformPlugin: Plugin { }
+/// For internal platform-specific bits
+protocol PlatformPlugin: Plugin {}
 
 public typealias EnrichmentClosure = (_ event: RawEvent?) -> RawEvent?
 public class ClosureEnrichment: Plugin {
     public var type: PluginType = .enrichment
-    public weak var analytics: Analytics? = nil
-    
-    internal let closure: EnrichmentClosure
-    
+    public weak var analytics: Analytics?
+
+    let closure: EnrichmentClosure
+
     init(closure: @escaping EnrichmentClosure) {
         self.closure = closure
     }
-    
+
     public func execute<T: RawEvent>(event: T?) -> T? {
-        return closure(event) as? T
+        self.closure(event) as? T
     }
 }
 
-
 // MARK: - Plugin instance helpers
+
 extension Plugin {
     public func configure(analytics: Analytics) {
         self.analytics = analytics
@@ -98,27 +98,27 @@ extension Plugin {
 extension DestinationPlugin {
     public func configure(analytics: Analytics) {
         self.analytics = analytics
-        apply { plugin in
+        self.apply { plugin in
             plugin.configure(analytics: analytics)
         }
     }
-    
+
     /**
      Applies the supplied closure to the currently loaded set of plugins.
-     
+
      - Parameter closure: A closure that takes an plugin to be operated on as a parameter.
-     
+
      */
     public func apply(closure: (Plugin) -> Void) {
         timeline.apply(closure)
     }
-    
+
     /**
      Adds a new plugin to the currently loaded set.
-     
+
      - Parameter plugin: The plugin to be added.
      - Returns: Returns the supplied plugin.
-     
+
      */
     @discardableResult
     public func add(plugin: Plugin) -> Plugin {
@@ -132,13 +132,13 @@ extension DestinationPlugin {
         analytics?.updateIfNecessary(plugin: plugin)
         return plugin
     }
-    
+
     /**
      Adds a new enrichment to the currently loaded set of plugins.
-     
+
      - Parameter enrichment: The enrichment closure to be added.
      - Returns: Returns the the generated plugin.
-     
+
      */
     @discardableResult
     public func add(enrichment: @escaping EnrichmentClosure) -> Plugin {
@@ -149,10 +149,10 @@ extension DestinationPlugin {
         timeline.add(plugin: plugin)
         return plugin
     }
-    
+
     /**
      Removes and unloads plugins with a matching name from the system.
-     
+
      - Parameter pluginName: An plugin name.
      */
     public func remove(plugin: Plugin) {
@@ -160,33 +160,32 @@ extension DestinationPlugin {
     }
 
     public func find<T: Plugin>(pluginType: T.Type) -> T? {
-        return timeline.find(pluginType: pluginType)
-    }
-    
-    public func findAll<T: Plugin>(pluginType: T.Type) -> [T]? {
-        return timeline.findAll(pluginType: pluginType)
+        timeline.find(pluginType: pluginType)
     }
 
+    public func findAll<T: Plugin>(pluginType: T.Type) -> [T]? {
+        timeline.findAll(pluginType: pluginType)
+    }
 }
 
 extension Analytics {
     /**
      Applies the supplied closure to the currently loaded set of plugins.
      NOTE: This does not apply to plugins contained within DestinationPlugins.
-     
+
      - Parameter closure: A closure that takes an plugin to be operated on as a parameter.
-     
+
      */
     public func apply(closure: (Plugin) -> Void) {
         timeline.apply(closure)
     }
-    
+
     /**
      Adds a new plugin to the currently loaded set.
-     
+
      - Parameter plugin: The plugin to be added.
      - Returns: Returns the name of the supplied plugin.
-     
+
      */
     @discardableResult
     public func add(plugin: Plugin) -> Plugin {
@@ -198,13 +197,13 @@ extension Analytics {
         updateIfNecessary(plugin: plugin)
         return plugin
     }
-    
+
     /**
      Adds a new enrichment to the currently loaded set of plugins.
-     
+
      - Parameter enrichment: The enrichment closure to be added.
      - Returns: Returns the the generated plugin.
-     
+
      */
     @discardableResult
     public func add(enrichment: @escaping EnrichmentClosure) -> Plugin {
@@ -213,25 +212,25 @@ extension Analytics {
         timeline.add(plugin: plugin)
         return plugin
     }
-    
+
     /**
      Removes and unloads plugins with a matching name from the system.
-     
+
      - Parameter pluginName: An plugin name.
      */
     public func remove(plugin: Plugin) {
         timeline.remove(plugin: plugin)
     }
-    
+
     public func find<T: Plugin>(pluginType: T.Type) -> T? {
-        return timeline.find(pluginType: pluginType)
+        timeline.find(pluginType: pluginType)
     }
-    
+
     public func findAll<T: Plugin>(pluginType: T.Type) -> [T]? {
-        return timeline.findAll(pluginType: pluginType)
+        timeline.findAll(pluginType: pluginType)
     }
-    
+
     public func find(key: String) -> DestinationPlugin? {
-        return timeline.find(key: key)
+        timeline.find(key: key)
     }
 }

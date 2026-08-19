@@ -9,27 +9,27 @@ import Foundation
 import Sovran
 
 #if os(Linux) || os(Windows)
-// Whoever is doing swift/linux/Windows development over there
-// decided that it'd be a good idea to split out a TON
-// of stuff into another framework that NO OTHER PLATFORM
-// has; I guess to be special.  :man-shrugging:
-import FoundationNetworking
+    // Whoever is doing swift/linux/Windows development over there
+    // decided that it'd be a good idea to split out a TON
+    // of stuff into another framework that NO OTHER PLATFORM
+    // has; I guess to be special.  :man-shrugging:
+    import FoundationNetworking
 #endif
 
 public class InferiseAnonymousId: AnonymousIdGenerator {
     public func newAnonymousId() -> String {
-        return UUID().uuidString
+        UUID().uuidString
     }
 }
 
 public class InferiseDestination: DestinationPlugin, Subscriber, FlushCompletion {
-    internal enum Constants: String {
+    enum Constants: String {
         // The wire key for this destination. It must match the key used in the
         // `integrations` object of the settings response — `isDestinationEnabled`
         // gates on its presence, so a mismatch silently drops every event.
         case integrationName = "Inferise"
-        case apiHost = "apiHost"
-        case apiKey = "apiKey"
+        case apiHost
+        case apiKey
     }
 
     public let type = PluginType.destination
@@ -37,37 +37,37 @@ public class InferiseDestination: DestinationPlugin, Subscriber, FlushCompletion
     public let timeline = Timeline()
     public weak var analytics: Analytics? {
         didSet {
-            initialSetup()
+            self.initialSetup()
         }
     }
 
-    internal struct UploadTaskInfo {
+    struct UploadTaskInfo {
         let url: URL?
         let data: Data?
         let task: DataTask
         // set/used via an extension in iOSLifecycleMonitor.swift
         typealias CleanupClosure = () -> Void
-        var cleanup: CleanupClosure? = nil
+        var cleanup: CleanupClosure?
     }
 
-    internal var httpClient: HTTPClient?
+    var httpClient: HTTPClient?
     private var uploads = [UploadTaskInfo]()
     private let uploadsQueue = DispatchQueue(label: "uploadsQueue.inferise.com")
     private var storage: Storage?
 
-    @Atomic internal var eventCount: Int = 0
+    @Atomic var eventCount: Int = 0
 
-    internal func initialSetup() {
+    func initialSetup() {
         guard let analytics = self.analytics else { return }
-        storage = analytics.storage
-        httpClient = HTTPClient(analytics: analytics)
+        self.storage = analytics.storage
+        self.httpClient = HTTPClient(analytics: analytics)
 
         // Add DestinationMetadata enrichment plugin
         add(plugin: DestinationMetadataPlugin())
     }
 
     public func update(settings: Settings, type: UpdateType) {
-        guard let analytics = analytics else { return }
+        guard let analytics else { return }
         let destinationInfo = settings.integrationSettings(forKey: self.key)
         var needsHTTPClientRebuild = false
 
@@ -97,28 +97,31 @@ public class InferiseDestination: DestinationPlugin, Subscriber, FlushCompletion
         }
 
         if needsHTTPClientRebuild {
-            httpClient = HTTPClient(analytics: analytics)
+            self.httpClient = HTTPClient(analytics: analytics)
         }
     }
 
     // MARK: - Event Handling Methods
+
     public func execute<T: RawEvent>(event: T?) -> T? {
-        guard let event = event else { return nil }
+        guard let event else { return nil }
         let result = process(incomingEvent: event)
         if let r = result {
-            queueEvent(event: r)
+            self.queueEvent(event: r)
         }
         return result
     }
 
     // MARK: - Abstracted Lifecycle Methods
-    internal func enterForeground() { }
 
-    internal func enterBackground() {
-        analytics?.flush()
+    func enterForeground() {}
+
+    func enterBackground() {
+        self.analytics?.flush()
     }
 
     // MARK: - Event Parsing Methods
+
     private func queueEvent<T: RawEvent>(event: T) {
         guard let storage = self.storage else { return }
         // Send Event to File System
@@ -131,19 +134,19 @@ public class InferiseDestination: DestinationPlugin, Subscriber, FlushCompletion
     public func flush(group: DispatchGroup) {
         group.enter()
         defer { group.leave() }
-        
+
         guard let storage = self.storage else { return }
         guard let analytics = self.analytics else { return }
-        
+
         // don't flush if analytics is disabled.
         guard analytics.enabled == true else { return }
-        
+
         _eventCount.set(0)
         cleanupUploads()
-        
+
         let type = storage.dataStore.transactionType
         let hasData = storage.dataStore.hasData
-        
+
         analytics.log(message: "Uploads in-progress: \(pendingUploads)")
 
         if pendingUploads == 0 {
@@ -168,7 +171,7 @@ extension InferiseDestination {
         // Cooperative release of allocated memory by URL instances (dataFiles).
         autoreleasepool {
             guard let files = storage.dataStore.fetch()?.dataFiles else { return }
-            
+
             for url in files {
                 // Use the autorelease pool to ensure that unnecessary memory allocations
                 // are released after each iteration. If there is a large backlog of files
@@ -177,7 +180,7 @@ extension InferiseDestination {
                     // enter for this url we're going to kick off
                     group.enter()
                     analytics.log(message: "Processing Batch:\n\(url.lastPathComponent)")
-                    
+
                     // set up the task
                     let uploadTask = httpClient.startBatchUpload(writeKey: analytics.configuration.values.writeKey, batch: url) { [weak self] result in
                         defer {
@@ -185,7 +188,7 @@ extension InferiseDestination {
                         }
                         guard let self else { return }
                         switch result {
-                        case .success(_):
+                        case .success:
                             storage.remove(data: [url])
                             cleanupUploads()
 
@@ -200,17 +203,18 @@ extension InferiseDestination {
                                 storage.remove(data: [url])
                             }
                             cleanupUploads()
+
                         default:
                             break
                         }
-                        
+
                         analytics.log(message: "Processed: \(url.lastPathComponent)")
                         // the upload we have here has just finished.
                         // make sure it gets removed and it's cleanup() called rather
                         // than waiting on the next flush to come around.
                         cleanupUploads()
                     }
-                    
+
                     // we have a legit upload in progress now, so add it to our list.
                     if let upload = uploadTask {
                         add(uploadTask: UploadTaskInfo(url: url, data: nil, task: upload))
@@ -222,7 +226,7 @@ extension InferiseDestination {
             }
         }
     }
-    
+
     private func flushData(group: DispatchGroup) {
         // DO NOT CALL THIS FROM THE MAIN THREAD, IT BLOCKS!
         // Don't make me add a check here; i'll be sad you didn't follow directions.
@@ -289,7 +293,7 @@ extension InferiseDestination {
 
                 guard let self else { return }
                 switch result {
-                case .success(_):
+                case .success:
                     storage.remove(data: removable)
                     didRemove = true
                     cleanupUploads()
@@ -301,6 +305,7 @@ extension InferiseDestination {
                         didRemove = true
                     }
                     cleanupUploads()
+
                 default:
                     break
                 }
@@ -332,13 +337,13 @@ extension InferiseDestination {
 // MARK: - Upload management
 
 extension InferiseDestination {
-    internal func cleanupUploads() {
+    func cleanupUploads() {
         // lets go through and get rid of any tasks that aren't running.
         // either they were suspended because a background task took too
         // long, or the os orphaned it due to device constraints (like a watch).
-        uploadsQueue.sync {
-            let before = uploads.count
-            var newPending = uploads
+        self.uploadsQueue.sync {
+            let before = self.uploads.count
+            var newPending = self.uploads
             newPending.removeAll { uploadInfo in
                 let shouldRemove = uploadInfo.task.state != .running
                 if shouldRemove, let cleanup = uploadInfo.cleanup {
@@ -346,23 +351,23 @@ extension InferiseDestination {
                 }
                 return shouldRemove
             }
-            uploads = newPending
-            let after = uploads.count
-            analytics?.log(message: "Cleaned up \(before - after) non-running uploads.")
+            self.uploads = newPending
+            let after = self.uploads.count
+            self.analytics?.log(message: "Cleaned up \(before - after) non-running uploads.")
         }
     }
 
-    internal var pendingUploads: Int {
+    var pendingUploads: Int {
         var uploadsCount = 0
-        uploadsQueue.sync {
-            uploadsCount = uploads.count
+        self.uploadsQueue.sync {
+            uploadsCount = self.uploads.count
         }
         return uploadsCount
     }
 
-    internal func add(uploadTask: UploadTaskInfo) {
-        uploadsQueue.sync {
-            uploads.append(uploadTask)
+    func add(uploadTask: UploadTaskInfo) {
+        self.uploadsQueue.sync {
+            self.uploads.append(uploadTask)
         }
     }
 }
@@ -371,6 +376,6 @@ extension InferiseDestination {
 
 extension InferiseDestination: VersionedPlugin {
     public static func version() -> String {
-        return __inferise_version
+        packageVersion
     }
 }

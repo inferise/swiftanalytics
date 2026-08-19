@@ -12,31 +12,31 @@ public class StartupQueue: Plugin, Subscriber {
     static let maxSize = 1000
 
     @Atomic public var running: Bool = false
-    
+
     public let type: PluginType = .before
-    
-    public weak var analytics: Analytics? = nil {
+
+    public weak var analytics: Analytics? {
         didSet {
-            analytics?.store.subscribe(self) { [weak self] (state: System) in
+            self.analytics?.store.subscribe(self) { [weak self] (state: System) in
                 self?.runningUpdate(state: state)
             }
         }
     }
-    
+
     let syncQueue = DispatchQueue(label: "startupQueue.inferise.com")
     var queuedEvents = [RawEvent]()
-    
-    required init() { }
-    
+
+    required init() {}
+
     public func execute<T: RawEvent>(event: T?) -> T? {
-        if running == false, let e = event  {
+        if self.running == false, let e = event {
             // timeline hasn't started, so queue it up.
-            syncQueue.sync {
-                if queuedEvents.count >= Self.maxSize {
+            self.syncQueue.sync {
+                if self.queuedEvents.count >= Self.maxSize {
                     // if we've exceeded the max queue size start dropping events
-                    queuedEvents.removeFirst()
+                    self.queuedEvents.removeFirst()
                 }
-                queuedEvents.append(e)
+                self.queuedEvents.append(e)
             }
             return nil
         }
@@ -46,20 +46,20 @@ public class StartupQueue: Plugin, Subscriber {
 }
 
 extension StartupQueue {
-    internal func runningUpdate(state: System) {
+    func runningUpdate(state: System) {
         _running.set(state.running)
         if state.running {
-            replayEvents()
+            self.replayEvents()
         }
     }
-    
-    internal func replayEvents() {
+
+    func replayEvents() {
         // replay the queued events to the instance of Analytics we're working with.
-        syncQueue.sync {
-            for event in queuedEvents {
-                analytics?.process(event: event)
+        self.syncQueue.sync {
+            for event in self.queuedEvents {
+                self.analytics?.process(event: event)
             }
-            queuedEvents.removeAll()
+            self.queuedEvents.removeAll()
         }
     }
 }

@@ -81,9 +81,9 @@ class HttpConfig_Tests: XCTestCase {
     func testBackoffConfigValidation_FiltersInvalidStatusCodes() {
         let config = BackoffConfig(
             statusCodeOverrides: [
-                99: .retry,   // Below valid range
-                408: .retry,  // Valid
-                600: .retry   // Above valid range
+                99: .retry, // Below valid range
+                408: .retry, // Valid
+                600: .retry, // Above valid range
             ]
         )
         let validated = config.validated()

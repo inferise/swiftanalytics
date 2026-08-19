@@ -13,6 +13,7 @@ import JSONSafeEncoding
 #endif
 
 // MARK: - Custom AnonymousId generator
+
 /// Conform to this protocol to generate your own AnonymousID
 public protocol AnonymousIdGenerator: AnyObject, Codable {
     /// Returns a new anonymousId.  The SDK still manages storage and retrieval of the
@@ -23,6 +24,7 @@ public protocol AnonymousIdGenerator: AnyObject, Codable {
 }
 
 // MARK: - Operating Mode
+
 /// Specifies the operating mode/context
 public enum OperatingMode {
     /// The operation of the Analytics client are synchronous.
@@ -30,11 +32,13 @@ public enum OperatingMode {
     /// The operation of the Analytics client are asynchronous.
     case asynchronous
 
-    static internal let defaultQueue = DispatchQueue(
-        label: "com.inferise.operatingModeQueue", qos: .utility)
+    static let defaultQueue = DispatchQueue(
+        label: "com.inferise.operatingModeQueue", qos: .utility
+    )
 }
 
 // MARK: - Storage Mode
+
 /// Specifies the storage mode to be used for events
 public enum StorageMode {
     /// Store events to disk (default).
@@ -57,11 +61,11 @@ public final class TrackedLifecycleEvent: NSObject, OptionSet {
     }
 
     public override func isEqual(_ object: Any?) -> Bool {
-        (object as? Self)?.rawValue == rawValue
+        (object as? Self)?.rawValue == self.rawValue
     }
 
     public override var hash: Int {
-        rawValue.hashValue
+        self.rawValue.hashValue
     }
 
     public static let none: TrackedLifecycleEvent = []
@@ -106,31 +110,31 @@ public final class TrackedLifecycleEvent: NSObject, OptionSet {
 }
 
 public class Configuration {
-    internal struct Values {
+    struct Values {
         var writeKey: String
-        var application: Any? = nil
+        var application: Any?
         var trackedApplicationLifecycleEvents = TrackedLifecycleEvent.all
         var flushAt: Int = 20
         var flushInterval: TimeInterval = 30
-        var defaultSettings: Settings? = nil
+        var defaultSettings: Settings?
         var autoAddInferiseDestination: Bool = true
         var apiHost: String = HTTPClient.getDefaultAPIHost()
         var cdnHost: String = HTTPClient.getDefaultCDNHost()
-        var requestFactory: ((URLRequest) -> URLRequest)? = nil
-        var errorHandler: ((Error) -> Void)? = nil
+        var requestFactory: ((URLRequest) -> URLRequest)?
+        var errorHandler: ((Error) -> Void)?
         var flushPolicies: [FlushPolicy] = [CountBasedFlushPolicy(), IntervalBasedFlushPolicy()]
         var operatingMode: OperatingMode = .asynchronous
         var flushQueue: DispatchQueue = OperatingMode.defaultQueue
-        var userAgent: String? = nil
+        var userAgent: String?
         var jsonNonConformingNumberStrategy: JSONSafeEncoder.NonConformingFloatEncodingStrategy =
             .zero
         var storageMode: StorageMode = .disk
         var anonymousIdGenerator: AnonymousIdGenerator = InferiseAnonymousId()
         var httpSession: (() -> any HTTPSession) = HTTPSessions.urlSession
-        var httpConfig: HttpConfig? = nil
+        var httpConfig: HttpConfig?
     }
 
-    internal var values: Values
+    var values: Values
 
     /// Initialize a configuration object to pass along to an Analytics instance.
     ///
@@ -141,7 +145,7 @@ public class Configuration {
         // enable the Inferise destination by default
         var settings = Settings(writeKey: writeKey)
         settings.integrations = try? JSON([
-            InferiseDestination.Constants.integrationName.rawValue: true
+            InferiseDestination.Constants.integrationName.rawValue: true,
         ])
 
         self.defaultSettings(settings)
@@ -151,7 +155,6 @@ public class Configuration {
 // MARK: - Analytics Configuration
 
 extension Configuration {
-
     /// Sets a reference to your application.  This can be useful in instances
     /// where referring back to your application is necessary, such as within plugins
     /// or async code.  The default value is `nil`.
@@ -160,7 +163,7 @@ extension Configuration {
     /// - Returns: The current Configuration.
     @discardableResult
     public func application(_ value: Any?) -> Configuration {
-        values.application = value
+        self.values.application = value
         return self
     }
 
@@ -174,7 +177,7 @@ extension Configuration {
         message: "Use `setTrackedApplicationLifecycleEvents(_:)` for more granular control"
     )
     public func trackApplicationLifecycleEvents(_ enabled: Bool) -> Configuration {
-        values.trackedApplicationLifecycleEvents = enabled ? .all : .none
+        self.values.trackedApplicationLifecycleEvents = enabled ? .all : .none
         return self
     }
 
@@ -184,9 +187,8 @@ extension Configuration {
     /// - Returns: The current Configuration.
     @discardableResult
     public func setTrackedApplicationLifecycleEvents(_ events: TrackedLifecycleEvent)
-        -> Configuration
-    {
-        values.trackedApplicationLifecycleEvents = events
+        -> Configuration {
+        self.values.trackedApplicationLifecycleEvents = events
         return self
     }
 
@@ -197,7 +199,7 @@ extension Configuration {
     /// - Returns: The current Configuration.
     @discardableResult
     public func flushAt(_ count: Int) -> Configuration {
-        values.flushAt = count
+        self.values.flushAt = count
         return self
     }
 
@@ -208,7 +210,7 @@ extension Configuration {
     /// - Returns: The current Configuration.
     @discardableResult
     public func flushInterval(_ interval: TimeInterval) -> Configuration {
-        values.flushInterval = interval
+        self.values.flushInterval = interval
         return self
     }
 
@@ -232,7 +234,7 @@ extension Configuration {
     /// - Returns: The current Configuration.
     @discardableResult
     public func defaultSettings(_ settings: Settings?) -> Configuration {
-        values.defaultSettings = settings
+        self.values.defaultSettings = settings
         return self
     }
 
@@ -244,7 +246,7 @@ extension Configuration {
     /// - Returns: The current Configuration.
     @discardableResult
     public func autoAddInferiseDestination(_ value: Bool) -> Configuration {
-        values.autoAddInferiseDestination = value
+        self.values.autoAddInferiseDestination = value
         return self
     }
 
@@ -256,7 +258,7 @@ extension Configuration {
     /// - Returns: The current Configuration.
     @discardableResult
     public func apiHost(_ value: String) -> Configuration {
-        values.apiHost = value
+        self.values.apiHost = value
         return self
     }
 
@@ -268,7 +270,7 @@ extension Configuration {
     /// - Returns: The current Configuration.
     @discardableResult
     public func cdnHost(_ value: String) -> Configuration {
-        values.cdnHost = value
+        self.values.cdnHost = value
         return self
     }
 
@@ -279,7 +281,7 @@ extension Configuration {
     /// - Returns: The current Configuration.
     @discardableResult
     public func requestFactory(_ value: @escaping (URLRequest) -> URLRequest) -> Configuration {
-        values.requestFactory = value
+        self.values.requestFactory = value
         return self
     }
 
@@ -291,13 +293,13 @@ extension Configuration {
     /// - Returns: The current Configuration.
     @discardableResult
     public func errorHandler(_ value: @escaping (Error) -> Void) -> Configuration {
-        values.errorHandler = value
+        self.values.errorHandler = value
         return self
     }
 
     @discardableResult
     public func flushPolicies(_ policies: [FlushPolicy]) -> Configuration {
-        values.flushPolicies = policies
+        self.values.flushPolicies = policies
         return self
     }
 
@@ -307,7 +309,7 @@ extension Configuration {
     /// desktop/mobile application.
     @discardableResult
     public func operatingMode(_ mode: OperatingMode) -> Configuration {
-        values.operatingMode = mode
+        self.values.operatingMode = mode
         return self
     }
 
@@ -315,14 +317,14 @@ extension Configuration {
     /// value is an SDK owned background queue.
     @discardableResult
     public func flushQueue(_ queue: DispatchQueue) -> Configuration {
-        values.flushQueue = queue
+        self.values.flushQueue = queue
         return self
     }
 
     /// Specify a custom UserAgent string.  This bypasses the OS dependent check entirely.
     @discardableResult
     public func userAgent(_ userAgent: String) -> Configuration {
-        values.userAgent = userAgent
+        self.values.userAgent = userAgent
         return self
     }
 
@@ -332,22 +334,22 @@ extension Configuration {
     public func jsonNonConformingNumberStrategy(
         _ strategy: JSONSafeEncoder.NonConformingFloatEncodingStrategy
     ) -> Configuration {
-        values.jsonNonConformingNumberStrategy = strategy
-        JSON.jsonNonConformingNumberStrategy = values.jsonNonConformingNumberStrategy
+        self.values.jsonNonConformingNumberStrategy = strategy
+        JSON.jsonNonConformingNumberStrategy = self.values.jsonNonConformingNumberStrategy
         return self
     }
 
     /// Specify the storage mode to use.  The default is `.disk`.
     @discardableResult
     public func storageMode(_ mode: StorageMode) -> Configuration {
-        values.storageMode = mode
+        self.values.storageMode = mode
         return self
     }
 
     /// Specify a custom anonymousId generator.  The default is and instance of `InferiseAnonymousId`.
     @discardableResult
     public func anonymousIdGenerator(_ generator: AnonymousIdGenerator) -> Configuration {
-        values.anonymousIdGenerator = generator
+        self.values.anonymousIdGenerator = generator
         return self
     }
 
@@ -357,9 +359,8 @@ extension Configuration {
     /// - Returns: The current configuration
     @discardableResult
     public func httpSession(_ httpSession: @escaping @autoclosure () -> any HTTPSession)
-        -> Configuration
-    {
-        values.httpSession = httpSession
+        -> Configuration {
+        self.values.httpSession = httpSession
         return self
     }
 
@@ -369,13 +370,13 @@ extension Configuration {
     /// - Returns: The current Configuration
     @discardableResult
     public func httpConfig(_ config: HttpConfig?) -> Configuration {
-        values.httpConfig = config
+        self.values.httpConfig = config
         return self
     }
 }
 
 extension Analytics {
     func configuration<T>(valueFor: () -> T) -> T {
-        return valueFor()
+        valueFor()
     }
 }

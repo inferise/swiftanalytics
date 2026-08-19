@@ -11,20 +11,20 @@
 //===----------------------------------------------------------------------===//
 
 /** --------------------------------------------------------------------------------------------
-TWILIO NOTICE: Filenames and functionality have been modified from their original counterparts @
-https://github.com/apple/swift-corelibs-foundation/blob/main/Sources/Foundation/JSONEncoder.swift
+ TWILIO NOTICE: Filenames and functionality have been modified from their original counterparts @
+ https://github.com/apple/swift-corelibs-foundation/blob/main/Sources/Foundation/JSONEncoder.swift
 
-Copyright (c) 2023 Twilio Inc.
----------------------------------------------------------------------------------------------**/
+ Copyright (c) 2023 Twilio Inc.
+ ---------------------------------------------------------------------------------------------**/
 
 import Foundation
 
 /// A marker protocol used to determine whether a value is a `String`-keyed `Dictionary`
 /// containing `Encodable` values (in which case it should be exempt from key conversion strategies).
 ///
-fileprivate protocol _JSONStringDictionaryEncodableMarker { }
+private protocol _JSONStringDictionaryEncodableMarker {}
 
-extension Dictionary: _JSONStringDictionaryEncodableMarker where Key == String, Value: Encodable { }
+extension Dictionary: _JSONStringDictionaryEncodableMarker where Key == String, Value: Encodable {}
 
 //===----------------------------------------------------------------------===//
 // JSON Encoder
@@ -49,7 +49,7 @@ open class JSONSafeEncoder {
 
         /// Produce JSON with dictionary keys sorted in lexicographic order.
         @available(macOS 10.13, iOS 11.0, watchOS 4.0, tvOS 11.0, *)
-        public static let sortedKeys    = OutputFormatting(rawValue: 1 << 1)
+        public static let sortedKeys = OutputFormatting(rawValue: 1 << 1)
 
         /// By default slashes get escaped ("/" → "\/", "http://apple.com/" → "http:\/\/apple.com\/")
         /// for security reasons, allowing outputted JSON to be safely embedded within HTML/XML.
@@ -103,7 +103,7 @@ open class JSONSafeEncoder {
         case `throw`
 
         /// Set the value to null, like Javascript does.
-        case `null`
+        case null
 
         /// Set the value to zero, the safest option for Swift decoding.
         case zero
@@ -118,6 +118,7 @@ open class JSONSafeEncoder {
             nan: "NaN"
         )
     }
+
     /// TWILIO MODIFICATION - End
 
     /// The strategy to use for automatically changing the value of keys before encoding.
@@ -189,9 +190,9 @@ open class JSONSafeEncoder {
                 searchRange = lowerCaseRange.upperBound..<searchRange.upperBound
             }
             words.append(wordStart..<searchRange.upperBound)
-            let result = words.map({ (range) in
-                return stringKey[range].lowercased()
-            }).joined(separator: "_")
+            let result = words.map { range in
+                stringKey[range].lowercased()
+            }.joined(separator: "_")
             return result
         }
     }
@@ -225,11 +226,11 @@ open class JSONSafeEncoder {
 
     /// The options set on the top-level encoder.
     fileprivate var options: _Options {
-        return _Options(dateEncodingStrategy: dateEncodingStrategy,
-                        dataEncodingStrategy: dataEncodingStrategy,
-                        nonConformingFloatEncodingStrategy: nonConformingFloatEncodingStrategy,
-                        keyEncodingStrategy: keyEncodingStrategy,
-                        userInfo: userInfo)
+        _Options(dateEncodingStrategy: self.dateEncodingStrategy,
+                 dataEncodingStrategy: self.dataEncodingStrategy,
+                 nonConformingFloatEncodingStrategy: self.nonConformingFloatEncodingStrategy,
+                 keyEncodingStrategy: self.keyEncodingStrategy,
+                 userInfo: self.userInfo)
     }
 
     // MARK: - Constructing a JSON Encoder
@@ -299,7 +300,7 @@ private enum JSONFuture {
         }
 
         var values: [JSONValue] {
-            self.array.map { (future) -> JSONValue in
+            self.array.map { future -> JSONValue in
                 switch future {
                 case .value(let value):
                     return value
@@ -335,7 +336,7 @@ private enum JSONFuture {
                 return array
             case .none, .value:
                 let array = RefArray()
-                dict[key] = .nestedArray(array)
+                self.dict[key] = .nestedArray(array)
                 return array
             }
         }
@@ -350,7 +351,7 @@ private enum JSONFuture {
                 preconditionFailure("For key \"\(key)\" a unkeyed container has already been created.")
             case .none, .value:
                 let object = RefObject()
-                dict[key] = .nestedObject(object)
+                self.dict[key] = .nestedObject(object)
                 return object
             }
         }
@@ -364,12 +365,12 @@ private enum JSONFuture {
             case .nestedArray:
                 preconditionFailure("For key \"\(key)\" a unkeyed container has already been created.")
             case .none, .value:
-                dict[key] = .encoder(encoder)
+                self.dict[key] = .encoder(encoder)
             }
         }
 
         var values: [String: JSONValue] {
-            self.dict.mapValues { (future) -> JSONValue in
+            self.dict.mapValues { future -> JSONValue in
                 switch future {
                 case .value(let value):
                     return value
@@ -389,7 +390,7 @@ private class JSONSafeEncoderImpl {
     let options: JSONSafeEncoder._Options
     let codingPath: [CodingKey]
     var userInfo: [CodingUserInfoKey: Any] {
-        options.userInfo
+        self.options.userInfo
     }
 
     var singleValue: JSONValue?
@@ -413,7 +414,7 @@ private class JSONSafeEncoderImpl {
 }
 
 extension JSONSafeEncoderImpl: Encoder {
-    func container<Key>(keyedBy _: Key.Type) -> KeyedEncodingContainer<Key> where Key: CodingKey {
+    func container<Key: CodingKey>(keyedBy _: Key.Type) -> KeyedEncodingContainer<Key> {
         if let _ = object {
             let container = JSONKeyedEncodingContainer<Key>(impl: self, codingPath: codingPath)
             return KeyedEncodingContainer(container)
@@ -454,10 +455,10 @@ extension JSONSafeEncoderImpl: Encoder {
 
 extension JSONSafeEncoderImpl: _SpecialTreatmentEncoder {
     var impl: JSONSafeEncoderImpl {
-        return self
+        self
     }
 
-    // untyped escape hatch. needed for `wrapObject`
+    /// untyped escape hatch. needed for `wrapObject`
     func wrapUntyped(_ encodable: Encodable) throws -> JSONValue {
         switch encodable {
         case let date as Date:
@@ -507,22 +508,22 @@ extension _SpecialTreatmentEncoder {
             }
             /// TWILIO MODIFICATION - End
             /**
-             Original
-            if case .convertToString(let posInfString, let negInfString, let nanString) = self.options.nonConformingFloatEncodingStrategy {
-                switch float {
-                case F.infinity:
-                    return .string(posInfString)
-                case -F.infinity:
-                    return .string(negInfString)
-                default:
-                    // must be nan in this case
-                    return .string(nanString)
-                }
-            }
-             */
+              Original
+             if case .convertToString(let posInfString, let negInfString, let nanString) = self.options.nonConformingFloatEncodingStrategy {
+                 switch float {
+                 case F.infinity:
+                     return .string(posInfString)
+                 case -F.infinity:
+                     return .string(negInfString)
+                 default:
+                     // must be nan in this case
+                     return .string(nanString)
+                 }
+             }
+              */
 
             var path = self.codingPath
-            if let additionalKey = additionalKey {
+            if let additionalKey {
                 path.append(additionalKey)
             }
 
@@ -610,13 +611,13 @@ extension _SpecialTreatmentEncoder {
 
     func wrapObject(_ object: [String: Encodable], for additionalKey: CodingKey?) throws -> JSONValue {
         var baseCodingPath = self.codingPath
-        if let additionalKey = additionalKey {
+        if let additionalKey {
             baseCodingPath.append(additionalKey)
         }
         var result = [String: JSONValue]()
         result.reserveCapacity(object.count)
 
-        try object.forEach { (key, value) in
+        try object.forEach { key, value in
             var elemCodingPath = baseCodingPath
             elemCodingPath.append(_JSONKey(stringValue: key, intValue: nil))
             let encoder = JSONSafeEncoderImpl(options: self.options, codingPath: elemCodingPath)
@@ -628,7 +629,7 @@ extension _SpecialTreatmentEncoder {
     }
 
     fileprivate func getEncoder(for additionalKey: CodingKey?) -> JSONSafeEncoderImpl {
-        if let additionalKey = additionalKey {
+        if let additionalKey {
             var newCodingPath = self.codingPath
             newCodingPath.append(additionalKey)
             return JSONSafeEncoderImpl(options: self.options, codingPath: newCodingPath)
@@ -647,7 +648,7 @@ private struct JSONKeyedEncodingContainer<K: CodingKey>: KeyedEncodingContainerP
 
     private var firstValueWritten: Bool = false
     fileprivate var options: JSONSafeEncoder._Options {
-        return self.impl.options
+        self.impl.options
     }
 
     init(impl: JSONSafeEncoderImpl, codingPath: [CodingKey]) {
@@ -656,7 +657,7 @@ private struct JSONKeyedEncodingContainer<K: CodingKey>: KeyedEncodingContainerP
         self.codingPath = codingPath
     }
 
-    // used for nested containers
+    /// used for nested containers
     init(impl: JSONSafeEncoderImpl, object: JSONFuture.RefObject, codingPath: [CodingKey]) {
         self.impl = impl
         self.object = object
@@ -671,7 +672,7 @@ private struct JSONKeyedEncodingContainer<K: CodingKey>: KeyedEncodingContainerP
             let newKeyString = JSONSafeEncoder.KeyEncodingStrategy._convertToSnakeCase(key.stringValue)
             return _JSONKey(stringValue: newKeyString, intValue: key.intValue)
         case .custom(let converter):
-            return converter(codingPath + [key])
+            return converter(self.codingPath + [key])
         }
     }
 
@@ -735,15 +736,14 @@ private struct JSONKeyedEncodingContainer<K: CodingKey>: KeyedEncodingContainerP
         try encodeFixedWidthInteger(value, key: self._converted(key))
     }
 
-    mutating func encode<T>(_ value: T, forKey key: Self.Key) throws where T: Encodable {
+    mutating func encode<T: Encodable>(_ value: T, forKey key: Self.Key) throws {
         let convertedKey = self._converted(key)
         let encoded = try self.wrapEncodable(value, for: convertedKey)
         self.object.set(encoded ?? .object([:]), for: convertedKey.stringValue)
     }
 
-    mutating func nestedContainer<NestedKey>(keyedBy _: NestedKey.Type, forKey key: Self.Key) ->
-        KeyedEncodingContainer<NestedKey> where NestedKey: CodingKey
-    {
+    mutating func nestedContainer<NestedKey: CodingKey>(keyedBy _: NestedKey.Type, forKey key: Self.Key) ->
+        KeyedEncodingContainer<NestedKey> {
         let convertedKey = self._converted(key)
         let newPath = self.codingPath + [convertedKey]
         let object = self.object.setObject(for: convertedKey.stringValue)
@@ -792,9 +792,10 @@ private struct JSONUnkeyedEncodingContainer: UnkeyedEncodingContainer, _SpecialT
     var count: Int {
         self.array.array.count
     }
+
     private var firstValueWritten: Bool = false
     fileprivate var options: JSONSafeEncoder._Options {
-        return self.impl.options
+        self.impl.options
     }
 
     init(impl: JSONSafeEncoderImpl, codingPath: [CodingKey]) {
@@ -803,7 +804,7 @@ private struct JSONUnkeyedEncodingContainer: UnkeyedEncodingContainer, _SpecialT
         self.codingPath = codingPath
     }
 
-    // used for nested containers
+    /// used for nested containers
     init(impl: JSONSafeEncoderImpl, array: JSONFuture.RefArray, codingPath: [CodingKey]) {
         self.impl = impl
         self.array = array
@@ -870,15 +871,14 @@ private struct JSONUnkeyedEncodingContainer: UnkeyedEncodingContainer, _SpecialT
         try encodeFixedWidthInteger(value)
     }
 
-    mutating func encode<T>(_ value: T) throws where T: Encodable {
+    mutating func encode<T: Encodable>(_ value: T) throws {
         let key = _JSONKey(stringValue: "Index \(self.count)", intValue: self.count)
         let encoded = try self.wrapEncodable(value, for: key)
         self.array.append(encoded ?? .object([:]))
     }
 
-    mutating func nestedContainer<NestedKey>(keyedBy _: NestedKey.Type) ->
-        KeyedEncodingContainer<NestedKey> where NestedKey: CodingKey
-    {
+    mutating func nestedContainer<NestedKey: CodingKey>(keyedBy _: NestedKey.Type) ->
+        KeyedEncodingContainer<NestedKey> {
         let newPath = self.codingPath + [_JSONKey(index: self.count)]
         let object = self.array.appendObject()
         let nestedContainer = JSONKeyedEncodingContainer<NestedKey>(impl: impl, object: object, codingPath: newPath)
@@ -916,7 +916,7 @@ private struct JSONSingleValueEncodingContainer: SingleValueEncodingContainer, _
 
     private var firstValueWritten: Bool = false
     fileprivate var options: JSONSafeEncoder._Options {
-        return self.impl.options
+        self.impl.options
     }
 
     init(impl: JSONSafeEncoderImpl, codingPath: [CodingKey]) {
@@ -1011,7 +1011,6 @@ extension JSONSingleValueEncodingContainer {
 }
 
 extension JSONValue {
-
     fileprivate struct Writer {
         let options: JSONSafeEncoder.OutputFormatting
 
@@ -1023,8 +1022,7 @@ extension JSONValue {
             var bytes = [UInt8]()
             if self.options.contains(.prettyPrinted) {
                 self.writeValuePretty(value, into: &bytes)
-            }
-            else {
+            } else {
                 self.writeValue(value, into: &bytes)
             }
             return bytes
@@ -1051,11 +1049,11 @@ extension JSONValue {
                 }
                 while let item = iterator.next() {
                     bytes.append(._comma)
-                    self.writeValue(item, into:&bytes)
+                    self.writeValue(item, into: &bytes)
                 }
                 bytes.append(._closebracket)
             case .object(let dict):
-                if #available(macOS 10.13, *), options.contains(.sortedKeys) {
+                if #available(macOS 10.13, *), self.options.contains(.sortedKeys) {
                     let sorted = dict.sorted { $0.key < $1.key }
                     self.writeObject(sorted, into: &bytes)
                 } else {
@@ -1065,8 +1063,7 @@ extension JSONValue {
         }
 
         private func writeObject<Object: Sequence>(_ object: Object, into bytes: inout [UInt8], depth: Int = 0)
-            where Object.Element == (key: String, value: JSONValue)
-        {
+            where Object.Element == (key: String, value: JSONValue) {
             var iterator = object.makeIterator()
             bytes.append(._openbrace)
             if let (key, value) = iterator.next() {
@@ -1117,7 +1114,7 @@ extension JSONValue {
                 self.addInset(to: &bytes, depth: depth)
                 bytes.append(._closebracket)
             case .object(let dict):
-                if #available(macOS 10.13, *), options.contains(.sortedKeys) {
+                if #available(macOS 10.13, *), self.options.contains(.sortedKeys) {
                     let sorted = dict.sorted { $0.key < $1.key }
                     self.writePrettyObject(sorted, into: &bytes, depth: depth)
                 } else {
@@ -1127,8 +1124,7 @@ extension JSONValue {
         }
 
         private func writePrettyObject<Object: Sequence>(_ object: Object, into bytes: inout [UInt8], depth: Int = 0)
-            where Object.Element == (key: String, value: JSONValue)
-        {
+            where Object.Element == (key: String, value: JSONValue) {
             var iterator = object.makeIterator()
             bytes.append(contentsOf: [._openbrace, ._newline])
             if let (key, value) = iterator.next() {
@@ -1159,7 +1155,7 @@ extension JSONValue {
 
             while nextIndex != stringBytes.endIndex {
                 switch stringBytes[nextIndex] {
-                case 0 ..< 32, UInt8(ascii: "\""), UInt8(ascii: "\\"):
+                case 0..<32, UInt8(ascii: "\""), UInt8(ascii: "\\"):
                     // All Unicode characters may be placed within the
                     // quotation marks, except for the characters that MUST be escaped:
                     // quotation mark, reverse solidus, and the control characters (U+0000
@@ -1167,7 +1163,7 @@ extension JSONValue {
                     // https://tools.ietf.org/html/rfc8259#section-7
 
                     // copy the current range over
-                    bytes.append(contentsOf: stringBytes[startCopyIndex ..< nextIndex])
+                    bytes.append(contentsOf: stringBytes[startCopyIndex..<nextIndex])
                     switch stringBytes[nextIndex] {
                     case UInt8(ascii: "\""): // quotation mark
                         bytes.append(contentsOf: [._backslash, ._quote])
@@ -1186,10 +1182,10 @@ extension JSONValue {
                     default:
                         func valueToAscii(_ value: UInt8) -> UInt8 {
                             switch value {
-                            case 0 ... 9:
-                                return value + UInt8(ascii: "0")
-                            case 10 ... 15:
-                                return value - 10 + UInt8(ascii: "a")
+                            case 0...9:
+                                value + UInt8(ascii: "0")
+                            case 10...15:
+                                value - 10 + UInt8(ascii: "a")
                             default:
                                 preconditionFailure()
                             }
@@ -1206,8 +1202,8 @@ extension JSONValue {
 
                     nextIndex = stringBytes.index(after: nextIndex)
                     startCopyIndex = nextIndex
-                case UInt8(ascii: "/") where options.contains(.withoutEscapingSlashes) == false:
-                    bytes.append(contentsOf: stringBytes[startCopyIndex ..< nextIndex])
+                case UInt8(ascii: "/") where self.options.contains(.withoutEscapingSlashes) == false:
+                    bytes.append(contentsOf: stringBytes[startCopyIndex..<nextIndex])
                     bytes.append(contentsOf: [._backslash, UInt8(ascii: "/")])
                     nextIndex = stringBytes.index(after: nextIndex)
                     startCopyIndex = nextIndex
@@ -1217,51 +1213,50 @@ extension JSONValue {
             }
 
             // copy everything, that hasn't been copied yet
-            bytes.append(contentsOf: stringBytes[startCopyIndex ..< nextIndex])
+            bytes.append(contentsOf: stringBytes[startCopyIndex..<nextIndex])
             bytes.append(UInt8(ascii: "\""))
         }
     }
 }
 
-
 //===----------------------------------------------------------------------===//
 // Shared Key Types
 //===----------------------------------------------------------------------===//
 
-internal struct _JSONKey: CodingKey {
-    public var stringValue: String
-    public var intValue: Int?
+struct _JSONKey: CodingKey {
+    var stringValue: String
+    var intValue: Int?
 
-    public init?(stringValue: String) {
+    init?(stringValue: String) {
         self.stringValue = stringValue
         self.intValue = nil
     }
 
-    public init?(intValue: Int) {
+    init?(intValue: Int) {
         self.stringValue = "\(intValue)"
         self.intValue = intValue
     }
 
-    public init(stringValue: String, intValue: Int?) {
+    init(stringValue: String, intValue: Int?) {
         self.stringValue = stringValue
         self.intValue = intValue
     }
 
-    internal init(index: Int) {
+    init(index: Int) {
         self.stringValue = "Index \(index)"
         self.intValue = index
     }
 
-    internal static let `super` = _JSONKey(stringValue: "super")!
+    static let `super` = _JSONKey(stringValue: "super")!
 }
 
 //===----------------------------------------------------------------------===//
 // Shared ISO8601 Date Formatter
 //===----------------------------------------------------------------------===//
 
-// NOTE: This value is implicitly lazy and _must_ be lazy. We're compiled against the latest SDK (w/ ISO8601DateFormatter), but linked against whichever Foundation the user has. ISO8601DateFormatter might not exist, so we better not hit this code path on an older OS.
+/// NOTE: This value is implicitly lazy and _must_ be lazy. We're compiled against the latest SDK (w/ ISO8601DateFormatter), but linked against whichever Foundation the user has. ISO8601DateFormatter might not exist, so we better not hit this code path on an older OS.
 @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
-internal var _iso8601Formatter: ISO8601DateFormatter = {
+var _iso8601Formatter: ISO8601DateFormatter = {
     let formatter = ISO8601DateFormatter()
     formatter.formatOptions = .withInternetDateTime
     return formatter
@@ -1279,13 +1274,12 @@ extension EncodingError {
     /// - parameter path: The path of `CodingKey`s taken to encode this value.
     /// - returns: An `EncodingError` with the appropriate path and debug description.
     fileprivate static func _invalidFloatingPointValue<T: FloatingPoint>(_ value: T, at codingPath: [CodingKey]) -> EncodingError {
-        let valueDescription: String
-        if value == T.infinity {
-            valueDescription = "\(T.self).infinity"
+        let valueDescription: String = if value == T.infinity {
+            "\(T.self).infinity"
         } else if value == -T.infinity {
-            valueDescription = "-\(T.self).infinity"
+            "-\(T.self).infinity"
         } else {
-            valueDescription = "\(T.self).nan"
+            "\(T.self).nan"
         }
 
         let debugDescription = "Unable to encode \(valueDescription) directly in JSON. Use JSONSafeEncoder.NonConformingFloatEncodingStrategy.convertToString to specify how the value should be encoded."

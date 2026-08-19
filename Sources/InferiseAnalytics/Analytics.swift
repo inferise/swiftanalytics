@@ -11,32 +11,33 @@ import Sovran
 // MARK: - Base Setup
 
 public class Analytics {
-    internal var configuration: Configuration {
+    var configuration: Configuration {
         // we're absolutely certain we will have a config
-        let system: System = store.currentState()!
+        let system: System = self.store.currentState()!
         return system.configuration
     }
-    internal var store: Store
-    internal var storage: Storage
+
+    var store: Store
+    var storage: Storage
 
     /// Enabled/disables debug logging to trace your data going through the SDK.
     public static var debugLogsEnabled = false
 
     public var timeline: Timeline
 
-    static internal let deadInstance = "DEADINSTANCE"
-    static internal weak var firstInstance: Analytics? = nil
+    static let deadInstance = "DEADINSTANCE"
+    static weak var firstInstance: Analytics?
 
-    @Atomic static internal var activeWriteKeys = [String]()
+    @Atomic static var activeWriteKeys = [String]()
 
-    @Atomic internal var lastSettingsCheck: Date = .distantPast
-    @Atomic internal var isCheckingSettings: Bool = false
+    @Atomic var lastSettingsCheck: Date = .distantPast
+    @Atomic var isCheckingSettings: Bool = false
 
-    internal func recordSettingsCheckTimestamp(_ date: Date = Date()) {
+    func recordSettingsCheckTimestamp(_ date: Date = Date()) {
         _lastSettingsCheck.set(date)
     }
 
-    internal func tryBeginCheckingSettings() -> Bool {
+    func tryBeginCheckingSettings() -> Bool {
         var didBegin = false
         _isCheckingSettings.mutate { flag in
             if !flag {
@@ -47,19 +48,19 @@ public class Analytics {
         return didBegin
     }
 
-    internal func endCheckingSettings() {
+    func endCheckingSettings() {
         _isCheckingSettings.set(false)
     }
 
-    // Used for WaitingPlugin's, see waiting.swift
-    internal var processingTimer: DispatchWorkItem? = nil
+    /// Used for WaitingPlugin's, see waiting.swift
+    var processingTimer: DispatchWorkItem?
 
     /**
      This method isn't a traditional singleton implementation.  It's provided here
      to ease migration from analytics-ios to analytics-swift.  Rather than return a
      singleton, it returns the first instance of Analytics created, OR an instance
      who's writekey is "DEADINSTANCE".
-    
+
      In the case of a dead instance, an assert will be thrown when in DEBUG builds to
      assist developers in knowning that `shared()` is being called too soon.
      */
@@ -76,7 +77,7 @@ public class Analytics {
             }
         #endif
 
-        return Analytics(configuration: Configuration(writeKey: deadInstance))
+        return Analytics(configuration: Configuration(writeKey: self.deadInstance))
     }
 
     /// Initialize this instance of Analytics with a given configuration setup.
@@ -91,22 +92,24 @@ public class Analytics {
             Self.addActiveWriteKey(configuration.values.writeKey)
         }
 
-        store = Store()
-        storage = Storage(
+        self.store = Store()
+        self.storage = Storage(
             store: self.store,
             writeKey: configuration.values.writeKey,
             storageMode: configuration.values.storageMode,
             operatingMode: configuration.values.operatingMode
         )
-        timeline = Timeline()
+        self.timeline = Timeline()
 
         // provide our default state
-        store.provide(state: System.defaultState(configuration: configuration, from: storage))
-        store.provide(
+        self.store.provide(state: System.defaultState(configuration: configuration, from: self.storage))
+        self.store.provide(
             state: UserInfo.defaultState(
-                from: storage, anonIdGenerator: configuration.values.anonymousIdGenerator))
+                from: self.storage, anonIdGenerator: configuration.values.anonymousIdGenerator
+            )
+        )
 
-        storage.analytics = self
+        self.storage.analytics = self
 
         checkSharedInstance()
 
@@ -118,23 +121,23 @@ public class Analytics {
         Self.removeActiveWriteKey(configuration.values.writeKey)
     }
 
-    internal func process<E: RawEvent>(incomingEvent: E, enrichments: [EnrichmentClosure]? = nil) {
+    func process<E: RawEvent>(incomingEvent: E, enrichments: [EnrichmentClosure]? = nil) {
         guard enabled == true else { return }
-        let event = incomingEvent.applyRawEventData(store: store, enrichments: enrichments)
+        let event = incomingEvent.applyRawEventData(store: self.store, enrichments: enrichments)
 
-        _ = timeline.process(incomingEvent: event)
+        _ = self.timeline.process(incomingEvent: event)
 
-        /*let flushPolicies = configuration.values.flushPolicies
-        for policy in flushPolicies {
-            policy.updateState(event: event)
-        
-            if (policy.shouldFlush() == true) {
-                flush()
-                policy.reset()
-            }
-        }*/
+        /* let flushPolicies = configuration.values.flushPolicies
+         for policy in flushPolicies {
+             policy.updateState(event: event)
 
-        let flushPolicies = configuration.values.flushPolicies
+             if (policy.shouldFlush() == true) {
+                 flush()
+                 policy.reset()
+             }
+         } */
+
+        let flushPolicies = self.configuration.values.flushPolicies
 
         var shouldFlush = false
         // if any policy says to flush, make note of that
@@ -149,8 +152,8 @@ public class Analytics {
         // if we were told to flush do it.
         if shouldFlush {
             // reset all the policies if one decided to flush.
-            flushPolicies.forEach {
-                $0.reset()
+            for flushPolicy in flushPolicies {
+                flushPolicy.reset()
             }
             flush()
         }
@@ -163,15 +166,15 @@ public class Analytics {
         guard enabled == true else { return }
         switch event {
         case let e as TrackEvent:
-            timeline.process(incomingEvent: e)
+            self.timeline.process(incomingEvent: e)
         case let e as IdentifyEvent:
-            timeline.process(incomingEvent: e)
+            self.timeline.process(incomingEvent: e)
         case let e as ScreenEvent:
-            timeline.process(incomingEvent: e)
+            self.timeline.process(incomingEvent: e)
         case let e as GroupEvent:
-            timeline.process(incomingEvent: e)
+            self.timeline.process(incomingEvent: e)
         case let e as AliasEvent:
-            timeline.process(incomingEvent: e)
+            self.timeline.process(incomingEvent: e)
         default:
             break
         }
@@ -191,13 +194,13 @@ extension Analytics {
             return false
         }
         set(value) {
-            store.dispatch(action: System.ToggleEnabledAction(enabled: value))
+            self.store.dispatch(action: System.ToggleEnabledAction(enabled: value))
         }
     }
 
     /// Returns the writekey in use for this instance.
     public var writeKey: String {
-        return configuration.values.writeKey
+        self.configuration.values.writeKey
     }
 
     /// Returns the anonymousId currently in use.
@@ -218,18 +221,18 @@ extension Analytics {
 
     /// Returns the current operating mode this instance was given.
     public var operatingMode: OperatingMode {
-        return configuration.values.operatingMode
+        self.configuration.values.operatingMode
     }
 
     /// Adjusts the flush interval post configuration.
     public var flushInterval: TimeInterval {
         get {
-            configuration.values.flushInterval
+            self.configuration.values.flushInterval
         }
         set(value) {
             if let state: System = store.currentState() {
                 let config = state.configuration.flushInterval(value)
-                store.dispatch(action: System.UpdateConfigurationAction(configuration: config))
+                self.store.dispatch(action: System.UpdateConfigurationAction(configuration: config))
             }
         }
     }
@@ -237,19 +240,19 @@ extension Analytics {
     /// Adjusts the flush-at count post configuration.
     public var flushAt: Int {
         get {
-            configuration.values.flushAt
+            self.configuration.values.flushAt
         }
         set(value) {
             if let state: System = store.currentState() {
                 let config = state.configuration.flushAt(value)
-                store.dispatch(action: System.UpdateConfigurationAction(configuration: config))
+                self.store.dispatch(action: System.UpdateConfigurationAction(configuration: config))
             }
         }
     }
 
     /// Returns a list of currently active flush policies.
     public var flushPolicies: [FlushPolicy] {
-        configuration.values.flushPolicies
+        self.configuration.values.flushPolicies
     }
 
     /// Returns the traits that were specified in the last identify call.
@@ -273,7 +276,7 @@ extension Analytics {
     /// called when flush has completed.
     public func flush(completion: (() -> Void)? = nil) {
         // only flush if we're enabled.
-        guard enabled == true else {
+        guard self.enabled == true else {
             completion?()
             return
         }
@@ -291,7 +294,7 @@ extension Analytics {
             }
         }
 
-        completionGroup.run(mode: operatingMode) {
+        completionGroup.run(mode: self.operatingMode) {
             completion?()
         }
     }
@@ -299,7 +302,7 @@ extension Analytics {
     /// Resets this instance of Analytics to a clean slate.  Traits, UserID's, anonymousId, etc are all cleared or reset.  This
     /// command will also be sent to each plugin present in the system.
     public func reset() {
-        store.dispatch(action: UserInfo.ResetAction())
+        self.store.dispatch(action: UserInfo.ResetAction())
         apply { plugin in
             if let p = plugin as? EventPlugin {
                 p.reset()
@@ -339,7 +342,7 @@ extension Analytics {
     /// ```
     @discardableResult
     public func subscribeToUserInfo(handler: @escaping (UserInfo) -> Void) -> Int {
-        return store.subscribe(self, initialState: true, queue: .main) { (state: UserInfo) in
+        self.store.subscribe(self, initialState: true, queue: .main) { (state: UserInfo) in
             handler(state)
         }
     }
@@ -363,19 +366,19 @@ extension Analytics {
     /// analytics.unsubscribe(id)
     /// ```
     public func unsubscribe(_ id: Int) {
-        store.unsubscribe(identifier: id)
+        self.store.unsubscribe(identifier: id)
     }
 
     /// Retrieve the version of this library in use.
     /// - Returns: A string representing the version in "BREAKING.FEATURE.FIX" format.
     public func version() -> String {
-        return Analytics.version()
+        Analytics.version()
     }
 
     /// Retrieve the version of this library in use.
     /// - Returns: A string representing the version in "BREAKING.FEATURE.FIX" format.
     public static func version() -> String {
-        return __inferise_version
+        packageVersion
     }
 }
 
@@ -412,17 +415,17 @@ extension Analytics {
             }
         }
 
-        return storage.dataStore.hasData
+        return self.storage.dataStore.hasData
     }
 
     /// Provides a list of finished, but unsent events.
     public var pendingUploads: [URL]? {
-        return storage.read(Storage.Constants.events)?.dataFiles
+        self.storage.read(Storage.Constants.events)?.dataFiles
     }
 
     /// Purge all pending event upload files.
     public func purgeStorage() {
-        storage.dataStore.reset()
+        self.storage.dataStore.reset()
     }
 
     /// Purge a single event upload file.
@@ -452,7 +455,7 @@ extension Analytics {
      Call openURL as needed or when instructed to by either UIApplicationDelegate or UISceneDelegate.
      This is necessary to track URL referrers across events.  This method will also iterate
      any plugins that are watching for openURL events.
-    
+
      Example:
      ```
      func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
@@ -465,14 +468,14 @@ extension Analytics {
     public func openURL<T: Encodable>(_ url: URL, options: T? = nil) {
         guard let jsonProperties = try? JSON(with: options) else { return }
         guard let dict = jsonProperties.dictionaryValue else { return }
-        openURL(url, options: dict)
+        self.openURL(url, options: dict)
     }
 
     /**
      Call openURL as needed or when instructed to by either UIApplicationDelegate or UISceneDelegate.
      This is necessary to track URL referrers across events.  This method will also iterate
      any plugins that are watching for openURL events.
-    
+
      Example:
      ```
      func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
@@ -482,7 +485,7 @@ extension Analytics {
      ```
      */
     public func openURL(_ url: URL, options: [String: Any] = [:]) {
-        store.dispatch(action: UserInfo.SetReferrerAction(url: url))
+        self.store.dispatch(action: UserInfo.SetReferrerAction(url: url))
 
         // let any conforming plugins know
         apply { plugin in
@@ -524,23 +527,23 @@ extension Analytics {
     }
 
     /// Determines if an instance is dead.
-    internal var isDead: Bool {
-        return configuration.values.writeKey == Self.deadInstance
+    var isDead: Bool {
+        self.configuration.values.writeKey == Self.deadInstance
     }
 
     /// Manage active writekeys.  It's wrapped in @atomic
-    internal static func isActiveWriteKey(_ writeKey: String) -> Bool {
-        Self.activeWriteKeys.contains(writeKey)
+    static func isActiveWriteKey(_ writeKey: String) -> Bool {
+        self.activeWriteKeys.contains(writeKey)
     }
 
-    internal static func addActiveWriteKey(_ writeKey: String) {
-        Self._activeWriteKeys.mutate { keys in
+    static func addActiveWriteKey(_ writeKey: String) {
+        _activeWriteKeys.mutate { keys in
             keys.append(writeKey)
         }
     }
 
-    internal static func removeActiveWriteKey(_ writeKey: String) {
-        Self._activeWriteKeys.mutate { keys in
+    static func removeActiveWriteKey(_ writeKey: String) {
+        _activeWriteKeys.mutate { keys in
             keys.removeAll { key in
                 writeKey == key
             }

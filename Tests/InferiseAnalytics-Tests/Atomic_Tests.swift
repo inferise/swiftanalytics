@@ -2,11 +2,9 @@ import XCTest
 @testable import InferiseAnalytics
 
 final class Atomic_Tests: XCTestCase {
-    override func setUpWithError() throws {
-    }
+    override func setUpWithError() throws {}
 
     func testAtomicIncrement() {
-
         @Atomic var counter = 0
 
         DispatchQueue.concurrentPerform(iterations: 1000) { _ in

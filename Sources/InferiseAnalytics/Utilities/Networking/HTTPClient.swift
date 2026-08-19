@@ -7,7 +7,7 @@
 
 import Foundation
 #if os(Linux) || os(Windows)
-import FoundationNetworking
+    import FoundationNetworking
 #endif
 
 public enum HTTPClientErrors: Error {
@@ -32,7 +32,7 @@ public class HTTPClient {
     private static let defaultAPIHost = "events.inferise.com/v1"
     private static let defaultCDNHost = "events.inferise.com/v1"
 
-    internal var session: any HTTPSession
+    var session: any HTTPSession
     private var apiHost: String
     private var apiKey: String
     private var cdnHost: String
@@ -69,7 +69,6 @@ public class HTTPClient {
         return result
     }
 
-
     /// Starts an upload of events. Responds appropriately if successful or not. If not, lets the respondant
     /// know if the task should be retried or not based on the response.
     /// - Parameters:
@@ -86,16 +85,16 @@ public class HTTPClient {
 
         // Check if we should upload this batch
         if let stateMachine = retryStateMachine {
-            let (decision, updatedState) = stateMachine.shouldUploadBatch(state: retryState, batchFile: batch.lastPathComponent)
-            retryState = updatedState
-            analytics?.storage.saveRetryState(retryState)
+            let (decision, updatedState) = stateMachine.shouldUploadBatch(state: self.retryState, batchFile: batch.lastPathComponent)
+            self.retryState = updatedState
+            self.analytics?.storage.saveRetryState(self.retryState)
 
             switch decision {
             case .skipAllBatches, .skipThisBatch:
                 completion(.failure(HTTPClientErrors.rateLimited))
                 return nil
             case .dropBatch:
-                analytics?.reportInternalError(AnalyticsError.batchUploadFail(AnalyticsError.networkServerRejected(nil, 0)))
+                self.analytics?.reportInternalError(AnalyticsError.batchUploadFail(AnalyticsError.networkServerRejected(nil, 0)))
                 completion(.failure(HTTPClientErrors.badRequest))
                 return nil
             case .proceed:
@@ -109,21 +108,21 @@ public class HTTPClient {
 
         // Add X-Retry-Count header
         if let stateMachine = retryStateMachine {
-            let retryCount = stateMachine.getRetryCount(state: retryState, batchFile: batchFileName)
+            let retryCount = stateMachine.getRetryCount(state: self.retryState, batchFile: batchFileName)
             if retryCount > 0 {
                 urlRequest.addValue("\(retryCount)", forHTTPHeaderField: "X-Retry-Count")
             }
         }
 
-        let dataTask = session.uploadTask(with: urlRequest, fromFile: batch) { [weak self] (data, response, error) in
+        let dataTask = self.session.uploadTask(with: urlRequest, fromFile: batch) { [weak self] data, response, error in
             guard let self else { return }
-            handleResponse(data: data, response: response, error: error, url: uploadURL, batchFile: batchFileName, completion: completion)
+            self.handleResponse(data: data, response: response, error: error, url: uploadURL, batchFile: batchFileName, completion: completion)
         }
 
         dataTask.resume()
         return dataTask
     }
-    
+
     /// Starts an upload of events. Responds appropriately if successful or not. If not, lets the respondant
     /// know if the task should be retried or not based on the response.
     /// - Parameters:
@@ -142,40 +141,40 @@ public class HTTPClient {
 
         // Add X-Retry-Count header
         if let stateMachine = retryStateMachine {
-            let retryCount = stateMachine.getRetryCount(state: retryState, batchFile: batchId)
+            let retryCount = stateMachine.getRetryCount(state: self.retryState, batchFile: batchId)
             if retryCount > 0 {
                 urlRequest.addValue("\(retryCount)", forHTTPHeaderField: "X-Retry-Count")
             }
         }
 
-        let dataTask = session.uploadTask(with: urlRequest, from: data) { [weak self] (data, response, error) in
+        let dataTask = self.session.uploadTask(with: urlRequest, from: data) { [weak self] data, response, error in
             guard let self else { return }
-            handleResponse(data: data, response: response, error: error, url: uploadURL, batchFile: batchId, completion: completion)
+            self.handleResponse(data: data, response: response, error: error, url: uploadURL, batchFile: batchId, completion: completion)
         }
 
         dataTask.resume()
         return dataTask
     }
-    
+
     private func extractRetryAfter(from response: HTTPURLResponse) -> Int? {
-        return response.value(forHTTPHeaderField: "Retry-After").flatMap { Int($0) }
+        response.value(forHTTPHeaderField: "Retry-After").flatMap { Int($0) }
     }
 
     private func handleResponse(data: Data?, response: URLResponse?, error: Error?, url: URL?, batchFile: String, completion: @escaping (_ result: Result<Bool, Error>) -> Void) {
-        if let error = error {
-            analytics?.log(message: "Error uploading request \(error.localizedDescription).")
-            analytics?.reportInternalError(AnalyticsError.networkUnknown(url, error))
+        if let error {
+            self.analytics?.log(message: "Error uploading request \(error.localizedDescription).")
+            self.analytics?.reportInternalError(AnalyticsError.networkUnknown(url, error))
             completion(.failure(HTTPClientErrors.unknown(error: error)))
         } else if let httpResponse = response as? HTTPURLResponse {
             // Update retry state after response
             if let stateMachine = retryStateMachine {
                 let responseInfo = ResponseInfo(
                     statusCode: httpResponse.statusCode,
-                    retryAfterSeconds: extractRetryAfter(from: httpResponse),
+                    retryAfterSeconds: self.extractRetryAfter(from: httpResponse),
                     batchFile: batchFile,
-                    currentTime: timeProvider.now()
+                    currentTime: self.timeProvider.now()
                 )
-                let newState = stateMachine.handleResponse(state: retryState, response: responseInfo)
+                let newState = stateMachine.handleResponse(state: self.retryState, response: responseInfo)
 
                 // Log when Retry-After triggers a new pipeline pause
                 if let retryAfterSeconds = responseInfo.retryAfterSeconds,
@@ -183,30 +182,30 @@ public class HTTPClient {
                    retryState.pipelineState != .rateLimited {
                     let waitUntil = newState.waitUntilTime.map { Date(timeIntervalSince1970: $0).description } ?? "unknown"
                     Analytics.inferiseLog(message: "Retry-After (\(retryAfterSeconds)s) received on HTTP \(httpResponse.statusCode) — pausing pipeline until \(waitUntil)", kind: .warning)
-                    analytics?.reportInternalError(AnalyticsError.networkServerLimited(url, httpResponse.statusCode))
+                    self.analytics?.reportInternalError(AnalyticsError.networkServerLimited(url, httpResponse.statusCode))
                 }
 
-                retryState = newState
-                analytics?.storage.saveRetryState(retryState)
+                self.retryState = newState
+                self.analytics?.storage.saveRetryState(self.retryState)
             }
 
-            switch (httpResponse.statusCode) {
+            switch httpResponse.statusCode {
             case 1..<300:
                 completion(.success(true))
                 return
             case 300..<400:
-                analytics?.reportInternalError(AnalyticsError.networkUnexpectedHTTPCode(url, httpResponse.statusCode))
+                self.analytics?.reportInternalError(AnalyticsError.networkUnexpectedHTTPCode(url, httpResponse.statusCode))
                 completion(.failure(HTTPClientErrors.statusCode(code: httpResponse.statusCode)))
             case 429:
-                analytics?.reportInternalError(AnalyticsError.networkServerLimited(url, httpResponse.statusCode))
+                self.analytics?.reportInternalError(AnalyticsError.networkServerLimited(url, httpResponse.statusCode))
                 completion(.failure(HTTPClientErrors.statusCode(code: httpResponse.statusCode)))
             default:
-                analytics?.reportInternalError(AnalyticsError.networkServerRejected(url, httpResponse.statusCode))
+                self.analytics?.reportInternalError(AnalyticsError.networkServerRejected(url, httpResponse.statusCode))
                 completion(.failure(HTTPClientErrors.statusCode(code: httpResponse.statusCode)))
             }
         }
     }
-    
+
     func settingsFor(writeKey: String, completion: @escaping (Bool, Settings?) -> Void) {
         guard let settingsURL = ingestURL(for: cdnHost, path: "/projects/\(writeKey)/settings") else {
             completion(false, nil)
@@ -215,8 +214,8 @@ public class HTTPClient {
 
         let urlRequest = configuredRequest(for: settingsURL, method: "GET")
 
-        let dataTask = session.dataTask(with: urlRequest) { [weak self] (data, response, error) in
-            if let error = error {
+        let dataTask = self.session.dataTask(with: urlRequest) { [weak self] data, response, error in
+            if let error {
                 self?.analytics?.reportInternalError(AnalyticsError.settingsFail(AnalyticsError.networkUnknown(settingsURL, error)))
                 completion(false, nil)
                 return
@@ -230,7 +229,7 @@ public class HTTPClient {
                 }
             }
 
-            guard let data = data else {
+            guard let data else {
                 self?.analytics?.reportInternalError(AnalyticsError.settingsFail(AnalyticsError.networkInvalidData))
                 completion(false, nil)
                 return
@@ -244,7 +243,6 @@ public class HTTPClient {
                 completion(false, nil)
                 return
             }
-
         }
 
         dataTask.resume()
@@ -252,15 +250,15 @@ public class HTTPClient {
 
     /// Returns true if the given status code should cause the batch to be dropped (not retried).
     func shouldDropBatch(forStatusCode code: Int) -> Bool {
-        return retryStateMachine?.shouldDropBatch(statusCode: code) ?? (code == 400)
+        self.retryStateMachine?.shouldDropBatch(statusCode: code) ?? (code == 400)
     }
 
     /// Check if a batch should be uploaded, and update retry state accordingly.
     func checkBatchUpload(batchId: String) -> UploadDecision {
         guard let stateMachine = retryStateMachine else { return .proceed }
-        let (decision, updatedState) = stateMachine.shouldUploadBatch(state: retryState, batchFile: batchId)
-        retryState = updatedState
-        analytics?.storage.saveRetryState(retryState)
+        let (decision, updatedState) = stateMachine.shouldUploadBatch(state: self.retryState, batchFile: batchId)
+        self.retryState = updatedState
+        self.analytics?.storage.saveRetryState(self.retryState)
         return decision
     }
 
@@ -270,26 +268,25 @@ public class HTTPClient {
     }
 }
 
-
 extension HTTPClient {
     static func authorizationHeaderForWriteKey(_ key: String) -> String {
         var returnHeader: String = ""
         let rawHeader = "\(key):"
         if let encodedRawHeader = rawHeader.data(using: .utf8) {
-            returnHeader = encodedRawHeader.base64EncodedString(options: NSData.Base64EncodingOptions.init(rawValue: 0))
+            returnHeader = encodedRawHeader.base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0))
         }
         return returnHeader
     }
 
-    internal static func getDefaultAPIHost() -> String {
-        return Self.defaultAPIHost
+    static func getDefaultAPIHost() -> String {
+        self.defaultAPIHost
     }
 
-    internal static func getDefaultCDNHost() -> String {
-        return Self.defaultCDNHost
+    static func getDefaultCDNHost() -> String {
+        self.defaultCDNHost
     }
 
-    internal func configuredRequest(for url: URL, method: String) -> URLRequest {
+    func configuredRequest(for url: URL, method: String) -> URLRequest {
         var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 60)
         request.httpMethod = method
         request.addValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")

@@ -8,7 +8,7 @@ public class SystemTimeProvider: TimeProvider {
     public init() {}
 
     public func now() -> TimeInterval {
-        return Date().timeIntervalSince1970
+        Date().timeIntervalSince1970
     }
 }
 
@@ -20,7 +20,7 @@ public class FakeTimeProvider: TimeProvider {
     }
 
     public func now() -> TimeInterval {
-        return currentTime
+        self.currentTime
     }
 
     public func setTime(_ time: TimeInterval) {

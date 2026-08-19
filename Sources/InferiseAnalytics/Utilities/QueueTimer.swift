@@ -7,21 +7,21 @@
 
 import Foundation
 
-internal class QueueTimer {
+class QueueTimer {
     enum State {
         case suspended
         case resumed
     }
-    
+
     let interval: TimeInterval
     let timer: DispatchSourceTimer
     let queue: DispatchQueue
     let handler: () -> Void
-    
+
     @Atomic var state: State = .suspended
-    
+
     static var timers = [QueueTimer]()
-    
+
     static func schedule(interval: TimeInterval, immediate: Bool = false, queue: DispatchQueue = .main, handler: @escaping () -> Void) {
         let timer = QueueTimer(interval: interval, queue: queue, handler: handler)
         Self.timers.append(timer)
@@ -31,19 +31,19 @@ internal class QueueTimer {
         self.interval = interval
         self.queue = queue
         self.handler = handler
-        
-        timer = DispatchSource.makeTimerSource(flags: [], queue: queue)
+
+        self.timer = DispatchSource.makeTimerSource(flags: [], queue: queue)
         if immediate {
-            timer.schedule(deadline: .now(), repeating: self.interval)
+            self.timer.schedule(deadline: .now(), repeating: self.interval)
         } else {
-            timer.schedule(deadline: .now() + self.interval, repeating: self.interval)
+            self.timer.schedule(deadline: .now() + self.interval, repeating: self.interval)
         }
-        timer.setEventHandler { [weak self] in
+        self.timer.setEventHandler { [weak self] in
             self?.handler()
         }
-        resume()
+        self.resume()
     }
-    
+
     deinit {
         timer.setEventHandler {
             // do nothing ...
@@ -52,39 +52,38 @@ internal class QueueTimer {
         timer.cancel()
         resume()
     }
-    
+
     func suspend() {
-        if state == .suspended {
+        if self.state == .suspended {
             return
         }
         _state.set(.suspended)
-        timer.suspend()
+        self.timer.suspend()
     }
-    
+
     func resume() {
-        if state == .resumed {
+        if self.state == .resumed {
             return
         }
         _state.set(.resumed)
-        timer.resume()
+        self.timer.resume()
     }
 }
 
-
 extension TimeInterval {
     static func milliseconds(_ value: Int) -> TimeInterval {
-        return TimeInterval(value) / 1000
+        TimeInterval(value) / 1000
     }
-    
+
     static func seconds(_ value: Int) -> TimeInterval {
-        return TimeInterval(value)
+        TimeInterval(value)
     }
-    
+
     static func hours(_ value: Int) -> TimeInterval {
-        return TimeInterval(60 * 60 * value)
+        TimeInterval(60 * 60 * value)
     }
-    
+
     static func days(_ value: Int) -> TimeInterval {
-        return TimeInterval((60 * 60 * value) * 24)
+        TimeInterval((60 * 60 * value) * 24)
     }
 }

@@ -1,6 +1,6 @@
 //
-//  File.swift
-//  
+//  MemoryStore.swift
+//
 //
 //  Created by Brandon Sneed on 11/27/23.
 //
@@ -9,70 +9,70 @@ import Foundation
 
 public class MemoryStore: DataStore {
     public typealias StoreConfiguration = Configuration
-    
+
     public struct Configuration {
         let writeKey: String
         let maxItems: Int
         let maxFetchSize: Int
-        
+
         public init(writeKey: String, maxItems: Int, maxFetchSize: Int) {
             self.writeKey = writeKey
             self.maxItems = maxItems
             self.maxFetchSize = maxFetchSize
         }
     }
-    
-    internal struct ItemData {
+
+    struct ItemData {
         let id: UUID
         let data: Data
-        
+
         init(data: Data) {
             self.id = UUID()
             self.data = data
         }
     }
-    
-    internal var items = [ItemData]()
-    
+
+    var items = [ItemData]()
+
     public var hasData: Bool {
-        return (items.count > 0)
+        !self.items.isEmpty
     }
-    
+
     public var count: Int {
-        return items.count
+        self.items.count
     }
-    
+
     public var transactionType: DataTransactionType {
-        return .data
+        .data
     }
-    
-    internal let config: Configuration
-    
+
+    let config: Configuration
+
     public required init(configuration: Configuration) {
         self.config = configuration
     }
-    
+
     public func reset() {
-        items.removeAll()
+        self.items.removeAll()
     }
-    
+
     public func append(data: RawEvent) {
         guard let d = data.toString().data(using: .utf8) else { return }
-        items.append(ItemData(data: d))
-        if items.count > config.maxItems {
-            items.removeFirst()
+        self.items.append(ItemData(data: d))
+        if self.items.count > self.config.maxItems {
+            self.items.removeFirst()
         }
     }
-    
+
     public func fetch(count: Int?, maxBytes: Int?, offset: Int = 0) -> DataResult? {
         var skipped = 0
         var accumulatedCount = 0
         var accumulatedSize: Int = 0
         var results = [ItemData]()
 
-        let maxBytes = maxBytes ?? config.maxFetchSize
+        let maxBytes = maxBytes ?? self.config.maxFetchSize
 
-        for item in items {
+        for item in self.items {
             if skipped < offset {
                 skipped += 1
                 continue
@@ -87,17 +87,17 @@ public class MemoryStore: DataStore {
             accumulatedSize += item.data.count
             results.append(item)
         }
-        if results.count > 0 {
+        if !results.isEmpty {
             let removable = results.map { item in
-                return item.id
+                item.id
             }
             return DataResult(data: fullyFormedJSON(items: results), removable: removable)
         }
         return nil
     }
-    
+
     public func remove(data: [DataStore.ItemID]) {
-        items.removeAll { itemData in
+        self.items.removeAll { itemData in
             let present = data.contains { id in
                 guard let id = id as? UUID else { return false }
                 return itemData.id == id
@@ -108,14 +108,14 @@ public class MemoryStore: DataStore {
 }
 
 extension MemoryStore {
-    internal func fullyFormedJSON(items: [ItemData]) -> Data? {
-        guard items.count > 0 else { return nil }
+    func fullyFormedJSON(items: [ItemData]) -> Data? {
+        guard !items.isEmpty else { return nil }
         var json = Data()
         let start = "{ \"batch\": [".data(using: .utf8)!
-        let end = "],\"sentAt\":\"\(Date().iso8601())\",\"writeKey\":\"\(config.writeKey)\"}".data(using: .utf8)!
-        
+        let end = "],\"sentAt\":\"\(Date().iso8601())\",\"writeKey\":\"\(self.config.writeKey)\"}".data(using: .utf8)!
+
         json.append(start)
-        items.indices.forEach { index in
+        for index in items.indices {
             if index == 0 {
                 json.append(items[index].data)
             } else {
@@ -124,8 +124,7 @@ extension MemoryStore {
             }
         }
         json.append(end)
-        
+
         return json
     }
 }
-

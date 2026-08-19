@@ -8,123 +8,123 @@
 import Foundation
 
 public protocol OpeningURLs {
-    func openURL(_ url: URL, options: [String : Any])
+    func openURL(_ url: URL, options: [String: Any])
 }
 
 extension OpeningURLs {
-    func openURL(_ url: URL, options: [String : Any]) {}
+    func openURL(_ url: URL, options: [String: Any]) {}
 }
 
 public class Context: PlatformPlugin {
     public let type: PluginType = .before
     public weak var analytics: Analytics?
-    
-    internal var staticContext = staticContextData()
-    internal static var device = VendorSystem.current
-    internal let instanceId = UUID().uuidString
-    
+
+    var staticContext = staticContextData()
+    static var device = VendorSystem.current
+    let instanceId = UUID().uuidString
+
     public func execute<T: RawEvent>(event: T?) -> T? {
         guard var workingEvent = event else { return event }
-        
-        var context = staticContext
-        
-        insertDynamicPlatformContextData(context: &context)
-        
+
+        var context = self.staticContext
+
+        self.insertDynamicPlatformContextData(context: &context)
+
         // add instanceId to the context
-        context["instanceId"] = instanceId
-        
+        context["instanceId"] = self.instanceId
+
         if let userInfo: UserInfo = analytics?.store.currentState(), let referrer = userInfo.referrer {
             context["referrer"] = ["url": referrer.absoluteString]
         }
-        
+
         // if this event came in with context data already
         // let it take precedence over our values.
         if let eventContext = workingEvent.context?.dictionaryValue {
-            context.merge(eventContext) { (_, new) in new }
+            context.merge(eventContext) { _, new in new }
         }
-        
+
         do {
             workingEvent.context = try JSON(context)
         } catch {
-            analytics?.reportInternalError(error)
+            self.analytics?.reportInternalError(error)
         }
-        
+
         return workingEvent
     }
-    
-    internal static func staticContextData() -> [String: Any] {
+
+    static func staticContextData() -> [String: Any] {
         var staticContext = [String: Any]()
-        
+
         // library name — the discriminator the ingest side uses to tell our
         // per-language SDKs apart, so keep the `inferise-<lang>` shape.
         staticContext["library"] = [
             "name": "inferise-swift",
-            "version": __inferise_version,
+            "version": packageVersion,
         ]
-        
+
         // app information
         let info = Bundle.main.infoDictionary ?? [:]
         let localizedInfo = Bundle.main.localizedInfoDictionary ?? [:]
         let app = info.merging(localizedInfo) { _, localized in localized }
-        
+
         if !app.isEmpty {
             let name = app["CFBundleDisplayName"] as? String
-                    ?? app["CFBundleName"] as? String
-                    ?? ""
-            
+                ?? app["CFBundleName"] as? String
+                ?? ""
+
             staticContext["app"] = [
                 "name": name,
                 "version": app["CFBundleShortVersionString"] ?? "",
                 "build": app["CFBundleVersion"] ?? "",
-                "namespace": Bundle.main.bundleIdentifier ?? ""
+                "namespace": Bundle.main.bundleIdentifier ?? "",
             ]
         }
-        
-        insertStaticPlatformContextData(context: &staticContext)
+
+        self.insertStaticPlatformContextData(context: &staticContext)
         return staticContext
     }
-    
-    internal static func insertStaticPlatformContextData(context: inout [String: Any]) {
+
+    static func insertStaticPlatformContextData(context: inout [String: Any]) {
         // device
         let device = Self.device
-        
+
         // "token" handled in DeviceToken.swift
         context["device"] = [
             "manufacturer": device.manufacturer,
             "type": device.type,
             "model": device.model,
             "name": device.name,
-            "id": device.identifierForVendor ?? ""
+            "id": device.identifierForVendor ?? "",
         ]
         // os
         context["os"] = [
             "name": device.systemName,
-            "version": device.systemVersion
+            "version": device.systemVersion,
         ]
         // screen
         let screen = device.screenSize
         context["screen"] = [
             "width": screen.width,
-            "height": screen.height
+            "height": screen.height,
         ]
         // locale
-        if Locale.preferredLanguages.count > 0 {
+        if !Locale.preferredLanguages.isEmpty {
             context["locale"] = Locale.preferredLanguages[0]
         }
         // timezone
         context["timezone"] = TimeZone.current.identifier
     }
 
-    internal func insertDynamicPlatformContextData(context: inout [String: Any]) {
+    func insertDynamicPlatformContextData(context: inout [String: Any]) {
         let device = Self.device
-        
+
         // network
         let status = device.connection
-        
+
         var cellular = false
         var wifi = false
         var bluetooth = false
-        
+
         switch status {
         case .online(.cellular):
             cellular = true
@@ -135,19 +135,19 @@ public class Context: PlatformPlugin {
         default:
             break
         }
-        
+
         // network connectivity
         context["network"] = [
             "bluetooth": bluetooth, // not sure any swift platforms support this currently
             "cellular": cellular,
-            "wifi": wifi
+            "wifi": wifi,
         ]
-        
+
         // user-agent
         // BKS: This use to be in the static section, however it was discovered that on some platforms
         // there can be a delay in retrieval.  It has to be fetched on the main thread, so we've spun it off
         // async and cache it when it comes back.
-        let userAgent = analytics?.configuration.values.userAgent ?? device.userAgent
+        let userAgent = self.analytics?.configuration.values.userAgent ?? device.userAgent
         context["userAgent"] = userAgent
 
         // other stuff?? ...

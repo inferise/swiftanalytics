@@ -15,14 +15,14 @@ enum InferiseISO8601DateFormatter {
     }()
 }
 
-internal extension Date {
+extension Date {
     func iso8601() -> String {
-        return InferiseISO8601DateFormatter.shared.string(from: self)
+        InferiseISO8601DateFormatter.shared.string(from: self)
     }
 }
 
-internal extension String {
+extension String {
     func iso8601() -> Date? {
-        return InferiseISO8601DateFormatter.shared.date(from: self)
+        InferiseISO8601DateFormatter.shared.date(from: self)
     }
 }

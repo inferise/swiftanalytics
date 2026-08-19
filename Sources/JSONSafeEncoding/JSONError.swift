@@ -11,12 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 /** --------------------------------------------------------------------------------------------
-TWILIO NOTICE: Filenames and functionality have been modified from their original counterparts @
-https://github.com/apple/swift-corelibs-foundation/blob/main/Sources/Foundation/JSONEncoder.swift
+ TWILIO NOTICE: Filenames and functionality have been modified from their original counterparts @
+ https://github.com/apple/swift-corelibs-foundation/blob/main/Sources/Foundation/JSONEncoder.swift
 
-Copyright (c) 2023 Twilio Inc.
----------------------------------------------------------------------------------------------**/
-
+ Copyright (c) 2023 Twilio Inc.
+ ---------------------------------------------------------------------------------------------**/
 
 import Foundation
 

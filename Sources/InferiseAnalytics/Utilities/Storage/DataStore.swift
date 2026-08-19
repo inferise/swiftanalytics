@@ -7,22 +7,21 @@
 
 import Foundation
 
-
 public struct DataResult {
     public let data: Data?
     public let dataFiles: [URL]?
     public let removable: [DataStore.ItemID]?
-    
-    internal init(data: Data?, dataFiles: [URL]?, removable: [DataStore.ItemID]?) {
+
+    init(data: Data?, dataFiles: [URL]?, removable: [DataStore.ItemID]?) {
         self.data = data
         self.dataFiles = dataFiles
         self.removable = removable
     }
-    
+
     public init(data: Data?, removable: [DataStore.ItemID]?) {
         self.init(data: data, dataFiles: nil, removable: removable)
     }
-    
+
     public init(dataFiles: [URL]?, removable: [DataStore.ItemID]?) {
         self.init(data: nil, dataFiles: dataFiles, removable: removable)
     }

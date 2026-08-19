@@ -1,6 +1,6 @@
 //
-//  File.swift
-//  
+//  DirectoryStore.swift
+//
 //
 //  Created by Brandon Sneed on 3/2/24.
 //
@@ -8,17 +8,17 @@
 import Foundation
 
 public class DirectoryStore: DataStore {
-    internal static var fileValidator: ((URL) -> Void)? = nil
-    
+    static var fileValidator: ((URL) -> Void)?
+
     public typealias StoreConfiguration = Configuration
-    
+
     public struct Configuration {
         let writeKey: String
         let storageLocation: URL
         let baseFilename: String
         let maxFileSize: Int
         let indexKey: String
-        
+
         public init(writeKey: String, storageLocation: URL, baseFilename: String, maxFileSize: Int, indexKey: String) {
             self.writeKey = writeKey
             self.storageLocation = storageLocation
@@ -27,53 +27,53 @@ public class DirectoryStore: DataStore {
             self.indexKey = indexKey
         }
     }
-    
+
     public var hasData: Bool {
-        return count > 0
+        !self.isEmpty
     }
-    
+
     public var count: Int {
         if let r = try? FileManager.default.contentsOfDirectory(at: config.storageLocation, includingPropertiesForKeys: nil) {
             return r.count
         }
         return 0
     }
-    
+
     public var transactionType: DataTransactionType {
-        return .file
+        .file
     }
-    
+
     static let tempExtension = "temp"
-    internal let config: Configuration
-    internal var writer: LineStreamWriter? = nil
-    internal let userDefaults: UserDefaults
-    
+    let config: Configuration
+    var writer: LineStreamWriter?
+    let userDefaults: UserDefaults
+
     public required init(configuration: Configuration) {
         try? FileManager.default.createDirectory(at: configuration.storageLocation, withIntermediateDirectories: true)
         self.config = configuration
-        self.userDefaults = UserDefaults(suiteName: "com.inferise.storage.\(config.writeKey)")!
+        self.userDefaults = UserDefaults(suiteName: "com.inferise.storage.\(self.config.writeKey)")!
     }
-    
+
     public func reset() {
         let files = sortedFiles(includeUnfinished: true)
-        remove(data: files)
+        self.remove(data: files)
     }
-    
+
     public func append(data: RawEvent) {
         let started = startFileIfNeeded()
         guard let writer else { return }
-        
+
         let line = data.toString()
-        
+
         // check if we're good on size ...
-        if writer.bytesWritten >= config.maxFileSize {
+        if writer.bytesWritten >= self.config.maxFileSize {
             // it's too big, end it.
             finishFile()
             // start over with the data we not writing.
-            append(data: data)
+            self.append(data: data)
             return
         }
-        
+
         do {
             if started {
                 try writer.writeLine(line)
@@ -84,23 +84,23 @@ public class DirectoryStore: DataStore {
             print(error)
         }
     }
-    
+
     public func fetch(count: Int?, maxBytes: Int?, offset: Int = 0) -> DataResult? {
-        if writer != nil {
+        if self.writer != nil {
             finishFile()
         }
         let sorted = sortedFiles()
         var data = sorted
-        
+
         if let maxBytes {
             data = upToSize(max: UInt64(maxBytes), files: data)
         }
-        
+
         if let count, count <= data.count {
             data = Array(data[0..<count])
         }
-        
-        if data.count > 0 {
+
+        if !data.isEmpty {
             return DataResult(dataFiles: data, removable: data)
         }
         return nil
@@ -126,15 +126,15 @@ extension DirectoryStore {
             return file.pathExtension == Self.tempExtension
         }
         let sorted = files.sorted { left, right in
-            return left.lastPathComponent < right.lastPathComponent
+            left.lastPathComponent < right.lastPathComponent
         }
         return sorted
     }
-    
+
     func upToSize(max: UInt64, files: [URL]) -> [URL] {
         var result = [URL]()
         var accumulatedSize: UInt64 = 0
-        
+
         for file in files {
             if let attrs = try? FileManager.default.attributesOfItem(atPath: file.path) {
                 guard let s = attrs[FileAttributeKey.size] as? Int else { continue }
@@ -147,12 +147,12 @@ extension DirectoryStore {
         }
         return result
     }
-    
+
     @inline(__always)
     func startFileIfNeeded() -> Bool {
         guard writer == nil else { return false }
         let index = getIndex()
-        let fileURL = config.storageLocation.appendingPathComponent("\(index)-\(config.baseFilename)")
+        let fileURL = self.config.storageLocation.appendingPathComponent("\(index)-\(self.config.baseFilename)")
         writer = LineStreamWriter(url: fileURL)
         if let writer, writer.bytesWritten == 0 {
             // Brand new file, write the batch header.
@@ -163,10 +163,10 @@ extension DirectoryStore {
         // File exists with content. Check if it was already finalized — this can happen
         // if the app was killed after finishFile() wrote the closing bracket but before
         // the rename to .temp succeeded. Appending to a finalized file corrupts the batch.
-        if isFinalized(url: fileURL) {
+        if self.isFinalized(url: fileURL) {
             self.writer = nil
             incrementIndex()
-            return startFileIfNeeded()
+            return self.startFileIfNeeded()
         }
         return false
     }
@@ -175,28 +175,30 @@ extension DirectoryStore {
         guard let reader = LineStreamReader(url: url) else { return false }
         var lastLine: String? = nil
         while let line = reader.readLine() {
-            if !line.isEmpty { lastLine = line }
+            if !line.isEmpty {
+                lastLine = line
+            }
         }
         return lastLine?.contains("\"sentAt\"") == true
     }
-    
+
     func finishFile() {
         guard let writer else {
             #if DEBUG
-            assertionFailure("There's no working file!")
+                assertionFailure("There's no working file!")
             #endif
             return
         }
-        
+
         let sentAt = Date().iso8601()
         let fileEnding = "],\"sentAt\":\"\(sentAt)\",\"writeKey\":\"\(config.writeKey)\"}"
         try? writer.writeLine(fileEnding)
-        
+
         let url = writer.url
-        
+
         // do validation before we rename to prevent the file disappearing out from under us.
         DirectoryStore.fileValidator?(url)
-        
+
         // move it to make availble for flushing ...
         let newURL = url.appendingPathExtension(Self.tempExtension)
         try? FileManager.default.moveItem(at: url, to: newURL)
@@ -207,13 +209,13 @@ extension DirectoryStore {
 
 extension DirectoryStore {
     func getIndex() -> Int {
-        let index: Int = userDefaults.integer(forKey: config.indexKey)
+        let index: Int = self.userDefaults.integer(forKey: self.config.indexKey)
         return index
     }
-    
+
     func incrementIndex() {
-        let index: Int = userDefaults.integer(forKey: config.indexKey) + 1
-        userDefaults.set(index, forKey: config.indexKey)
-        userDefaults.synchronize()
+        let index: Int = self.userDefaults.integer(forKey: self.config.indexKey) + 1
+        self.userDefaults.set(index, forKey: self.config.indexKey)
+        self.userDefaults.synchronize()
     }
 }

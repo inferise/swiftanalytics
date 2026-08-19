@@ -5,18 +5,18 @@ class Storage_RetryState_Tests: XCTestCase {
     var storage: Storage!
 
     func uniqueWriteKey() -> String {
-        return "test-\(UUID().uuidString)"
+        "test-\(UUID().uuidString)"
     }
 
     override func setUp() {
         super.setUp()
         let analytics = Analytics(configuration: Configuration(writeKey: uniqueWriteKey()))
-        storage = analytics.storage
+        self.storage = analytics.storage
     }
 
     override func tearDown() {
         // Clean up
-        storage.hardReset(doYouKnowHowToUseThis: true)
+        self.storage.hardReset(doYouKnowHowToUseThis: true)
         super.tearDown()
     }
 
@@ -28,8 +28,8 @@ class Storage_RetryState_Tests: XCTestCase {
             batchMetadata: ["batch1": BatchMetadata(failureCount: 2)]
         )
 
-        storage.saveRetryState(state)
-        let loaded = storage.loadRetryState()
+        self.storage.saveRetryState(state)
+        let loaded = self.storage.loadRetryState()
 
         XCTAssertEqual(loaded.pipelineState, .rateLimited)
         XCTAssertEqual(loaded.waitUntilTime, 12345.0)
@@ -38,7 +38,7 @@ class Storage_RetryState_Tests: XCTestCase {
     }
 
     func testLoadRetryStateReturnsDefaultsWhenMissing() {
-        let loaded = storage.loadRetryState()
+        let loaded = self.storage.loadRetryState()
 
         XCTAssertEqual(loaded.pipelineState, .ready)
         XCTAssertNil(loaded.waitUntilTime)
@@ -54,8 +54,8 @@ class Storage_RetryState_Tests: XCTestCase {
             batchMetadata: [:]
         )
 
-        storage.saveRetryState(state)
-        let loaded = storage.loadRetryState()
+        self.storage.saveRetryState(state)
+        let loaded = self.storage.loadRetryState()
 
         XCTAssertEqual(loaded.pipelineState, .ready)
         XCTAssertTrue(loaded.batchMetadata.isEmpty)
@@ -66,12 +66,12 @@ class Storage_RetryState_Tests: XCTestCase {
             batchMetadata: [
                 "batch1": BatchMetadata(failureCount: 1, nextRetryTime: 1000, firstFailureTime: 100),
                 "batch2": BatchMetadata(failureCount: 2, nextRetryTime: 2000, firstFailureTime: 200),
-                "batch3": BatchMetadata(failureCount: 3, nextRetryTime: 3000, firstFailureTime: 300)
+                "batch3": BatchMetadata(failureCount: 3, nextRetryTime: 3000, firstFailureTime: 300),
             ]
         )
 
-        storage.saveRetryState(state)
-        let loaded = storage.loadRetryState()
+        self.storage.saveRetryState(state)
+        let loaded = self.storage.loadRetryState()
 
         XCTAssertEqual(loaded.batchMetadata.count, 3)
         XCTAssertEqual(loaded.batchMetadata["batch1"]?.failureCount, 1)
@@ -82,14 +82,14 @@ class Storage_RetryState_Tests: XCTestCase {
     func testSaveRetryState_OverwritesPreviousState() {
         // Save initial state
         let state1 = RetryState(globalRetryCount: 5)
-        storage.saveRetryState(state1)
+        self.storage.saveRetryState(state1)
 
         // Overwrite with new state
         let state2 = RetryState(globalRetryCount: 10)
-        storage.saveRetryState(state2)
+        self.storage.saveRetryState(state2)
 
         // Should load the newer state
-        let loaded = storage.loadRetryState()
+        let loaded = self.storage.loadRetryState()
         XCTAssertEqual(loaded.globalRetryCount, 10)
     }
 
@@ -99,8 +99,8 @@ class Storage_RetryState_Tests: XCTestCase {
             waitUntilTime: nil
         )
 
-        storage.saveRetryState(state)
-        let loaded = storage.loadRetryState()
+        self.storage.saveRetryState(state)
+        let loaded = self.storage.loadRetryState()
 
         XCTAssertEqual(loaded.pipelineState, .rateLimited)
         XCTAssertNil(loaded.waitUntilTime)
@@ -113,12 +113,12 @@ class Storage_RetryState_Tests: XCTestCase {
                     failureCount: 1,
                     nextRetryTime: nil,
                     firstFailureTime: nil
-                )
+                ),
             ]
         )
 
-        storage.saveRetryState(state)
-        let loaded = storage.loadRetryState()
+        self.storage.saveRetryState(state)
+        let loaded = self.storage.loadRetryState()
 
         let batch = loaded.batchMetadata["batch1"]
         XCTAssertNotNil(batch)
@@ -130,10 +130,10 @@ class Storage_RetryState_Tests: XCTestCase {
     func testLoadRetryState_ReturnsDefaultsForCorruptData() {
         // Write corrupt data directly to storage
         let corruptData = Data([0xFF, 0xFE, 0xFD, 0xFC]) // Invalid plist data
-        storage.write(.retryState, value: corruptData)
+        self.storage.write(.retryState, value: corruptData)
 
         // Should return default state instead of crashing
-        let loaded = storage.loadRetryState()
+        let loaded = self.storage.loadRetryState()
 
         XCTAssertEqual(loaded.pipelineState, .ready)
         XCTAssertNil(loaded.waitUntilTime)
@@ -153,12 +153,12 @@ class Storage_RetryState_Tests: XCTestCase {
                     failureCount: Int.max,
                     nextRetryTime: impossiblyFarFuture,
                     firstFailureTime: Date().timeIntervalSince1970 + 10000
-                )
+                ),
             ]
         )
 
-        storage.saveRetryState(state)
-        let loaded = storage.loadRetryState()
+        self.storage.saveRetryState(state)
+        let loaded = self.storage.loadRetryState()
 
         // PropertyListEncoder/Decoder should handle these values
         // This test documents that extreme values are persisted/loaded without error
