@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Run E2E tests for analytics-swift
+# Run E2E tests for swiftanalytics
 #
 # Prerequisites: Xcode / Swift toolchain, Node.js 18+
 #
@@ -17,7 +17,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SDK_ROOT="$SCRIPT_DIR/.."
 E2E_DIR="${E2E_TESTS_DIR:-$SDK_ROOT/../sdk-e2e-tests}"
 
-echo "=== Building analytics-swift e2e-cli ==="
+echo "=== Building swiftanalytics e2e-cli ==="
 
 # Apply HTTP patch
 cd "$SDK_ROOT"

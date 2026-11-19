@@ -20,7 +20,7 @@
 SOURCES := Sources/InferiseAnalytics Tests
 
 repo:
-	open https://github.com/inferise/analytics-swift
+	open https://github.com/inferise/swiftanalytics
 
 # Open the package in Xcode (SPM manifest; no .xcodeproj needed).
 open:
@@ -74,18 +74,20 @@ DOCS_PORT := 8000
 DOCS_URL := http://localhost:$(DOCS_PORT)/documentation/inferiseanalytics
 
 # Build the DocC documentation from the library's `///` headerdoc, then serve it over
-# HTTP and open it in the browser. A DocC site is a JS app with absolute paths, so it
-# must be served (opening ./docs/index.html directly shows a blank page); this target
-# does the whole build + serve + launch. `xcrun` lets the plugin find `docc` in the
-# Xcode toolchain. `--symbol-graph-minimum-access-level internal` documents the
-# internal types too (Storage, HTTPClient, the retry state machine), not just the
-# public API. The browser opens once the port is listening; Ctrl-C stops the server.
+# HTTP and open it in the browser. Output goes to .build/docs (gitignored) so the
+# committed docs/ directory stays free for hand-written documentation and plans.
+# A DocC site is a JS app with absolute paths, so it must be served (opening the
+# index.html directly shows a blank page); this target does the whole build + serve +
+# launch. `xcrun` lets the plugin find `docc` in the Xcode toolchain.
+# `--symbol-graph-minimum-access-level internal` documents the internal types too
+# (Storage, HTTPClient, the retry state machine), not just the public API.
+# The browser opens once the port is listening; Ctrl-C stops the server.
 .PHONY: docs
 docs:
-	xcrun swift package --allow-writing-to-directory docs generate-documentation --target InferiseAnalytics --symbol-graph-minimum-access-level internal --output-path docs
+	xcrun swift package generate-documentation --target InferiseAnalytics --symbol-graph-minimum-access-level internal --output-path .build/docs
 	@echo "📚 Serving $(DOCS_URL)  (Ctrl-C to stop)"
 	@( until nc -z localhost $(DOCS_PORT) 2>/dev/null; do sleep 1; done; open "$(DOCS_URL)" ) &
-	@python3 -m http.server -d docs $(DOCS_PORT)
+	@python3 -m http.server -d .build/docs $(DOCS_PORT)
 
 # ---------------------------------------------
 # Release tagging
@@ -127,7 +129,7 @@ substyle:
 
 # Add the control wiki submodule.
 subwiki:
-	git submodule add git@github.com:inferise/analytics-swift.wiki.git wiki
+	git submodule add git@github.com:inferise/swiftanalytics.wiki.git wiki
 
 # Initialize and update all submodules.
 subpull:

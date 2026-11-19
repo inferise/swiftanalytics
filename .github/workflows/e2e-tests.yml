@@ -1,5 +1,5 @@
-# E2E Tests for analytics-swift
-# Copy this file to: analytics-swift/.github/workflows/e2e-tests.yml
+# E2E Tests for swiftanalytics
+# Copy this file to: swiftanalytics/.github/workflows/e2e-tests.yml
 #
 # This workflow:
 # 1. Checks out the SDK and sdk-e2e-tests repos
