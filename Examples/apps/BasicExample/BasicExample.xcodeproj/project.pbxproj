@@ -129,7 +129,7 @@
 			);
 			mainGroup = 46E38358265837EA00BA2502;
 			packageReferences = (
-				7BE804C72CB59AE70062B64E /* XCLocalSwiftPackageReference "../../../../analytics-swift" */,
+				7BE804C72CB59AE70062B64E /* XCLocalSwiftPackageReference "../../../../swiftanalytics" */,
 			);
 			productRefGroup = 46E38362265837EA00BA2502 /* Products */;
 			projectDirPath = "";
@@ -373,9 +373,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		7BE804C72CB59AE70062B64E /* XCLocalSwiftPackageReference "../../../../analytics-swift" */ = {
+		7BE804C72CB59AE70062B64E /* XCLocalSwiftPackageReference "../../../../swiftanalytics" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = "../../../../analytics-swift";
+			relativePath = "../../../../swiftanalytics";
 		};
 /* End XCLocalSwiftPackageReference section */
 

@@ -84,8 +84,9 @@ app-extension/widget setups.
 
 ## Contributing
 
-See the [contributing guide](CONTRIBUTING.md), and the
-[code of conduct](CODE_OF_CONDUCT.md).
+See the [contributing guide](docs/CONTRIBUTING.md), and the
+[code of conduct](CODE_OF_CONDUCT.md). Plans and normal documentation live in
+[docs/](docs/).
 
 ## License
 

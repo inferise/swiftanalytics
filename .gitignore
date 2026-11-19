@@ -105,3 +105,6 @@ XCFrameworkOutput
 
 # AI semantic search index
 .ai-index/
+
+# Inferise
+.inferise/

@@ -1,4 +1,4 @@
-# analytics-swift e2e-cli
+# swiftanalytics e2e-cli
 
 E2E test CLI for the InferiseAnalytics SDK. Accepts a JSON input describing events and SDK configuration, sends them through the real SDK, and outputs results as JSON.
 
